@@ -1,0 +1,89 @@
+#!/bin/bash
+#BSUB -J viiraa_webapp_api
+#BSUB -G compute-nlin
+#BSUB -q artsci
+#BSUB -R "rusage[mem=64GB]"
+#BSUB -a 'docker(sizhez03/pytorch_cuda:0.0.2)'
+#BSUB -W 08:00
+#BSUB -n 4
+#BSUB -oo logs/viiraa_webapp_api.%J.out
+#BSUB -eo logs/viiraa_webapp_api.%J.err
+
+set -euo pipefail
+
+PORT="${VIIRAA_WEBAPP_PORT:-}"
+if [ -z "${PORT}" ]; then
+  echo "VIIRAA_WEBAPP_PORT is required (set by submit script)." >&2
+  exit 1
+fi
+
+if [ -d /scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction-Clinical-Agent ]; then
+  cd /scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction-Clinical-Agent || exit 1
+elif [ -d /storage1/fs1/nlin/Active/sizhe_shadow_min/scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction-Clinical-Agent ]; then
+  cd /storage1/fs1/nlin/Active/sizhe_shadow_min/scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction-Clinical-Agent || exit 1
+else
+  echo "Repo path not found." >&2
+  exit 1
+fi
+
+mkdir -p logs webapp/logs
+
+PYTHON_BIN=""
+if [ -x /storage1/fs1/nlin/Active/sizhe/conda/envs/Viiraa/bin/python ]; then
+  PYTHON_BIN=/storage1/fs1/nlin/Active/sizhe/conda/envs/Viiraa/bin/python
+elif [ -f ~/miniconda3/bin/activate ]; then
+  . ~/miniconda3/bin/activate
+  conda activate Viiraa || true
+  if [ "${CONDA_DEFAULT_ENV:-}" = "Viiraa" ]; then
+    PYTHON_BIN="$(command -v python)"
+  fi
+elif [ -f /home/sizhe/miniconda3/bin/activate ]; then
+  . /home/sizhe/miniconda3/bin/activate
+  conda activate Viiraa || true
+  if [ "${CONDA_DEFAULT_ENV:-}" = "Viiraa" ]; then
+    PYTHON_BIN="$(command -v python)"
+  fi
+fi
+
+if [ -z "$PYTHON_BIN" ] && [ -x /home/sizhe/miniconda3/envs/Viiraa/bin/python ]; then
+  PYTHON_BIN=/home/sizhe/miniconda3/envs/Viiraa/bin/python
+fi
+
+if [ -z "$PYTHON_BIN" ]; then
+  echo "Viiraa python not found." >&2
+  exit 1
+fi
+
+export PYTHON_BIN
+export PYTHONPATH="$PWD"
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+echo "[webapp] start $(date -Iseconds)"
+echo "[webapp] python=${PYTHON_BIN}"
+echo "[webapp] port=${PORT}"
+echo "[webapp] host=$(hostname -f 2>/dev/null || hostname)"
+echo
+echo "[webapp] SSH tunnel from local machine (adjust login host/user):"
+echo "  ssh -N -L ${PORT}:$(hostname -s):${PORT} <user>@<login-host>"
+echo
+echo "[webapp] URL after tunnel:"
+echo "  http://localhost:${PORT}/"
+echo
+
+# Ensure API dependencies are available in this runtime.
+if ! "${PYTHON_BIN}" - <<'PY'
+import importlib.util
+mods = ["fastapi", "uvicorn", "pydantic"]
+missing = [m for m in mods if importlib.util.find_spec(m) is None]
+if missing:
+    raise SystemExit("MISSING:" + ",".join(missing))
+PY
+then
+  echo "[webapp] Installing webapp dependencies..."
+  "${PYTHON_BIN}" -m pip install -r webapp/requirements.txt
+fi
+
+exec "${PYTHON_BIN}" -m uvicorn webapp.backend.app:app --host 0.0.0.0 --port "${PORT}"

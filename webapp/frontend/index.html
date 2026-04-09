@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viiraa Scalar Predictor</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --accent: #0f766e;
+        --border: #e5e7eb;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background: linear-gradient(130deg, #f7f5ef 0%, #e8f0f2 100%);
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 20px auto;
+        padding: 0 14px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 1.9rem;
+      }
+      .sub {
+        margin-bottom: 14px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 12px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .section {
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .section h3 {
+        margin: 0 0 10px;
+        font-size: 0.98rem;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px;
+      }
+      label {
+        display: block;
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      input, select, textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        font-size: 0.93rem;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .primary {
+        background: var(--accent);
+        color: white;
+      }
+      .secondary {
+        background: #e5e7eb;
+      }
+      .results {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 8px;
+      }
+      .metric {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 10px;
+      }
+      .metric h4 {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .value {
+        margin-top: 6px;
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+      .err {
+        color: #b91c1c;
+        white-space: pre-wrap;
+      }
+      .small {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .log-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px;
+        margin-bottom: 8px;
+        background: #fbfdff;
+      }
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Viiraa Scalar Predictor</h1>
+      <div class="sub">Predict <code>auc_120_abs</code>, <code>iauc_120</code>, and <code>peak_amplitude</code> from meal/glucose context.</div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="row">
+            <button class="secondary" id="loadExampleBtn">Load Example</button>
+            <button class="secondary" id="loadRawExampleBtn">Load Raw Example</button>
+            <button class="secondary" id="clearBtn">Clear</button>
+            <button class="secondary" id="deriveBtn">Derive Features</button>
+            <button class="primary" id="predictBtn">Run Prediction</button>
+            <button class="primary" id="predictRawBtn">Predict From Raw</button>
+          </div>
+          <div id="error" class="err"></div>
+          <div class="section">
+            <h3>Raw Input (Optional)</h3>
+            <label for="rawMealInfo">meal_info (JSON object)</label>
+            <textarea id="rawMealInfo" rows="6" placeholder='{"meal_type":"Lunch","meal_calories":650,"carbs_g":70,"protein_g":32,"fat_g":22,"A1c PDL (Lab)":5.7,"Fasting GLU - PDL (Lab)":95,"minutes_since_last_meal":180}'></textarea>
+            <label for="rawPreGlucose" style="margin-top:8px;">pre_glucose_series (comma/newline separated)</label>
+            <textarea id="rawPreGlucose" rows="4" placeholder="92, 93, 94, 95, 97, 99"></textarea>
+            <div class="fields" style="margin-top:8px;">
+              <div>
+                <label for="rawStepMinutes">step_minutes</label>
+                <input id="rawStepMinutes" type="number" step="any" value="5" />
+              </div>
+              <div>
+                <label for="rawBaselineWindow">baseline_window_minutes</label>
+                <input id="rawBaselineWindow" type="number" step="any" value="30" />
+              </div>
+            </div>
+            <div class="small" style="margin-top:6px;">Use “Derive Features” to populate the form below from raw meal + glucose sequence.</div>
+          </div>
+          <div id="formSections"></div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:10px;">
+            <h3 style="margin-top:0;">Prediction Output</h3>
+            <div id="results" class="results"></div>
+            <div class="small" id="requestMeta"></div>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <h3 style="margin-top:0;">Recent Requests</h3>
+            <div id="recentLogs"></div>
+            <button class="secondary" id="refreshLogsBtn">Refresh Logs</button>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;">Raw Payload</h3>
+            <textarea id="rawPayload" rows="14" readonly></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const FIELD_GROUPS = [
+        {
+          title: "Meal Context",
+          fields: [
+            { key: "meal_type", type: "select", options: ["Breakfast", "Lunch", "Dinner", "Snacks"], required: true },
+            { key: "meal_calories", type: "number", required: true },
+            { key: "carbs_g", type: "number", required: true },
+            { key: "protein_g", type: "number", required: true },
+            { key: "fat_g", type: "number", required: true },
+            { key: "minutes_since_last_meal", type: "number", required: true },
+          ],
+        },
+        {
+          title: "Lab & Baseline",
+          fields: [
+            { key: "A1c PDL (Lab)", type: "number", required: true },
+            { key: "Fasting GLU - PDL (Lab)", type: "number", required: true },
+            { key: "premeal_baseline_glucose", type: "number", required: true },
+            { key: "baseline_glucose_median_30m", type: "number", required: true },
+            { key: "baseline_glucose_mean_30m", type: "number", required: true },
+          ],
+        },
+        {
+          title: "Pre-Meal Glucose Dynamics",
+          fields: [
+            { key: "pre_glucose_min_180m", type: "number", required: true },
+            { key: "pre_glucose_max_180m", type: "number", required: true },
+            { key: "pre_glucose_range_180m", type: "number", required: true },
+            { key: "pre_glucose_iqr_180m", type: "number", required: true },
+            { key: "pre_glucose_std_180m", type: "number", required: true },
+            { key: "pre_glucose_cv_180m", type: "number", required: true },
+            { key: "pre_glucose_missing_frac", type: "number", required: true },
+            { key: "pre_glucose_valid_count", type: "number", required: true },
+            { key: "pre_glucose_longest_gap", type: "number", required: true },
+          ],
+        },
+        {
+          title: "Slope Features",
+          fields: [
+            { key: "glucose_slope_180_60", type: "number", required: true },
+            { key: "glucose_slope_60_15", type: "number", required: true },
+            { key: "glucose_slope_15_0", type: "number", required: true },
+            { key: "glucose_slope_recent_minus_early", type: "number", required: true },
+          ],
+        },
+      ];
+
+      const formSectionsEl = document.getElementById("formSections");
+      const errorEl = document.getElementById("error");
+      const resultsEl = document.getElementById("results");
+      const rawPayloadEl = document.getElementById("rawPayload");
+      const requestMetaEl = document.getElementById("requestMeta");
+      const recentLogsEl = document.getElementById("recentLogs");
+      const rawMealInfoEl = document.getElementById("rawMealInfo");
+      const rawPreGlucoseEl = document.getElementById("rawPreGlucose");
+      const rawStepMinutesEl = document.getElementById("rawStepMinutes");
+      const rawBaselineWindowEl = document.getElementById("rawBaselineWindow");
+
+      function buildForm() {
+        formSectionsEl.innerHTML = "";
+        for (const group of FIELD_GROUPS) {
+          const section = document.createElement("div");
+          section.className = "section";
+          const title = document.createElement("h3");
+          title.textContent = group.title;
+          section.appendChild(title);
+          const fieldsWrap = document.createElement("div");
+          fieldsWrap.className = "fields";
+          for (const f of group.fields) {
+            const cell = document.createElement("div");
+            const label = document.createElement("label");
+            label.setAttribute("for", f.key);
+            label.textContent = f.required ? `${f.key} *` : f.key;
+            cell.appendChild(label);
+            let input;
+            if (f.type === "select") {
+              input = document.createElement("select");
+              for (const opt of f.options) {
+                const el = document.createElement("option");
+                el.value = opt;
+                el.textContent = opt;
+                input.appendChild(el);
+              }
+            } else {
+              input = document.createElement("input");
+              input.type = "number";
+              input.step = "any";
+            }
+            input.id = f.key;
+            input.dataset.required = String(!!f.required);
+            input.dataset.kind = f.type;
+            cell.appendChild(input);
+            fieldsWrap.appendChild(cell);
+          }
+          section.appendChild(fieldsWrap);
+          formSectionsEl.appendChild(section);
+        }
+      }
+
+      function clearOutput() {
+        errorEl.textContent = "";
+        resultsEl.innerHTML = "";
+        requestMetaEl.textContent = "";
+        rawPayloadEl.value = "";
+      }
+
+      function clearForm() {
+        for (const group of FIELD_GROUPS) {
+          for (const f of group.fields) {
+            const el = document.getElementById(f.key);
+            if (!el) continue;
+            if (f.type === "select") el.value = f.options[0];
+            else el.value = "";
+          }
+        }
+      }
+
+      function fillForm(features) {
+        for (const group of FIELD_GROUPS) {
+          for (const f of group.fields) {
+            const el = document.getElementById(f.key);
+            if (!el) continue;
+            if (features[f.key] !== undefined && features[f.key] !== null) {
+              el.value = String(features[f.key]);
+            }
+          }
+        }
+      }
+
+      function collectFeatures() {
+        const out = {};
+        const errs = [];
+        for (const group of FIELD_GROUPS) {
+          for (const f of group.fields) {
+            const el = document.getElementById(f.key);
+            if (!el) continue;
+            const raw = String(el.value ?? "").trim();
+            if (f.required && raw.length === 0) {
+              errs.push(`Missing required field: ${f.key}`);
+              continue;
+            }
+            if (f.type === "select") {
+              out[f.key] = raw;
+            } else {
+              const v = Number(raw);
+              if (!Number.isFinite(v)) {
+                errs.push(`Field must be numeric: ${f.key}`);
+                continue;
+              }
+              out[f.key] = v;
+            }
+          }
+        }
+        return { features: out, errors: errs };
+      }
+
+      function renderPredictions(preds) {
+        resultsEl.innerHTML = "";
+        const order = ["auc_120_abs", "iauc_120", "peak_amplitude"];
+        for (const key of order) {
+          const card = document.createElement("div");
+          card.className = "metric";
+          const v = Number(preds[key]);
+          card.innerHTML = `<h4>${key}</h4><div class="value">${v.toFixed(3)}</div>`;
+          resultsEl.appendChild(card);
+        }
+      }
+
+      async function loadExample() {
+        clearOutput();
+        const r = await fetch("/v1/example-input");
+        const data = await r.json();
+        fillForm(data.features || {});
+      }
+
+      function parseRawPreGlucose() {
+        const txt = String(rawPreGlucoseEl.value || "").trim();
+        if (!txt) return [];
+        return txt
+          .split(/[\n,]+/)
+          .map((x) => x.trim())
+          .filter((x) => x.length > 0)
+          .map((x) => Number(x));
+      }
+
+      function collectRawInput() {
+        const mealRaw = String(rawMealInfoEl.value || "").trim();
+        let mealInfo = {};
+        if (!mealRaw) throw new Error("raw meal_info is required.");
+        try {
+          mealInfo = JSON.parse(mealRaw);
+        } catch {
+          throw new Error("raw meal_info must be valid JSON.");
+        }
+        const series = parseRawPreGlucose();
+        if (series.length < 4) throw new Error("pre_glucose_series must have at least 4 values.");
+        if (series.some((v) => !Number.isFinite(v))) throw new Error("pre_glucose_series must be numeric.");
+
+        const stepMinutes = Number(rawStepMinutesEl.value);
+        const baselineWindowMinutes = Number(rawBaselineWindowEl.value);
+        if (!Number.isFinite(stepMinutes) || stepMinutes <= 0) throw new Error("step_minutes must be > 0.");
+        if (!Number.isFinite(baselineWindowMinutes) || baselineWindowMinutes <= 0) throw new Error("baseline_window_minutes must be > 0.");
+
+        return { meal_info: mealInfo, pre_glucose_series: series, step_minutes: stepMinutes, baseline_window_minutes: baselineWindowMinutes };
+      }
+
+      async function deriveFeaturesFromRaw() {
+        clearOutput();
+        let payload;
+        try {
+          payload = collectRawInput();
+        } catch (err) {
+          errorEl.textContent = err.message || String(err);
+          return;
+        }
+
+        rawPayloadEl.value = JSON.stringify(payload, null, 2);
+        const r = await fetch("/v1/build-features-from-raw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          errorEl.textContent = data.detail || "Feature derivation failed.";
+          rawPayloadEl.value = JSON.stringify(data, null, 2);
+          return;
+        }
+        fillForm(data.features || {});
+        rawPayloadEl.value = JSON.stringify(data, null, 2);
+      }
+
+      async function runPrediction() {
+        clearOutput();
+        const { features, errors } = collectFeatures();
+        if (errors.length) {
+          errorEl.textContent = errors.join("\n");
+          return;
+        }
+        const payload = { features, include_expected_columns: false };
+        rawPayloadEl.value = JSON.stringify(payload, null, 2);
+
+        const r = await fetch("/v1/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          errorEl.textContent = data.detail || "Prediction failed.";
+          rawPayloadEl.value = JSON.stringify(data, null, 2);
+          return;
+        }
+        renderPredictions(data.predictions);
+        requestMetaEl.textContent = `request_id: ${data.request_id}`;
+        rawPayloadEl.value = JSON.stringify(data, null, 2);
+        await loadRecentLogs();
+      }
+
+      async function runPredictionFromRaw() {
+        clearOutput();
+        let rawInput;
+        try {
+          rawInput = collectRawInput();
+        } catch (err) {
+          errorEl.textContent = err.message || String(err);
+          return;
+        }
+
+        const payload = { raw_input: rawInput, include_expected_columns: false };
+        rawPayloadEl.value = JSON.stringify(payload, null, 2);
+        const r = await fetch("/v1/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          errorEl.textContent = data.detail || "Raw prediction failed.";
+          rawPayloadEl.value = JSON.stringify(data, null, 2);
+          return;
+        }
+        if (data.features_used) fillForm(data.features_used);
+        renderPredictions(data.predictions);
+        requestMetaEl.textContent = `request_id: ${data.request_id}`;
+        rawPayloadEl.value = JSON.stringify(data, null, 2);
+        await loadRecentLogs();
+      }
+
+      async function loadRawExample() {
+        clearOutput();
+        const r = await fetch("/static/sample_raw_input_single_meal.json");
+        if (!r.ok) {
+          errorEl.textContent = "Raw example file not found.";
+          return;
+        }
+        const payload = await r.json();
+        const one = Array.isArray(payload) ? payload[0] : payload;
+        rawMealInfoEl.value = JSON.stringify(one.meal_info || {}, null, 2);
+        rawPreGlucoseEl.value = (one.pre_glucose_series || []).join(", ");
+        rawStepMinutesEl.value = String(one.step_minutes ?? 5);
+        rawBaselineWindowEl.value = String(one.baseline_window_minutes ?? 30);
+      }
+
+      async function loadRecentLogs() {
+        recentLogsEl.innerHTML = "";
+        const r = await fetch("/v1/logs/recent?limit=8");
+        const data = await r.json();
+        const items = data.items || [];
+        if (!items.length) {
+          recentLogsEl.innerHTML = `<div class="small">No logs yet.</div>`;
+          return;
+        }
+        for (const item of items) {
+          const div = document.createElement("div");
+          div.className = "log-item";
+          const status = item.status || "unknown";
+          const ts = item.ts_utc || "";
+          const req = item.request_id || "";
+          const lat = item.latency_ms !== undefined ? `${item.latency_ms} ms` : "";
+          div.innerHTML = `<div class="small"><b>${status}</b> ${ts}</div><div class="small">${req}</div><div class="small">${lat}</div>`;
+          recentLogsEl.appendChild(div);
+        }
+      }
+
+      document.getElementById("loadExampleBtn").addEventListener("click", loadExample);
+      document.getElementById("loadRawExampleBtn").addEventListener("click", loadRawExample);
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        clearForm();
+        rawMealInfoEl.value = "";
+        rawPreGlucoseEl.value = "";
+        rawStepMinutesEl.value = "5";
+        rawBaselineWindowEl.value = "30";
+        clearOutput();
+      });
+      document.getElementById("deriveBtn").addEventListener("click", deriveFeaturesFromRaw);
+      document.getElementById("predictBtn").addEventListener("click", runPrediction);
+      document.getElementById("predictRawBtn").addEventListener("click", runPredictionFromRaw);
+      document.getElementById("refreshLogsBtn").addEventListener("click", loadRecentLogs);
+
+      buildForm();
+      loadExample();
+      loadRawExample();
+      loadRecentLogs();
+    </script>
+  </body>
+</html>
