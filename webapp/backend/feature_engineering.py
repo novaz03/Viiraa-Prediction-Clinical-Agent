@@ -87,6 +87,24 @@ def _require_raw_text(meal_info: Dict[str, Any], canonical: str) -> str:
     return out
 
 
+def _normalize_height_to_inches(height_raw: float) -> float:
+    # Model training uses inches.
+    # Accept user-entered inches directly; convert common metric inputs.
+    if height_raw > 100.0:  # centimeters
+        return height_raw / 2.54
+    if 1.2 <= height_raw <= 2.5:  # meters
+        return height_raw * 39.37007874015748
+    return height_raw
+
+
+def _normalize_weight_to_pounds(weight_raw: float) -> float:
+    # Model training uses pounds.
+    # Convert likely-kg inputs (e.g., 67.5) to pounds.
+    if weight_raw < 90.0:
+        return weight_raw * 2.2046226218487757
+    return weight_raw
+
+
 def build_required_features_from_raw(
     meal_info: Dict[str, Any],
     pre_glucose_series: List[Any],
@@ -163,12 +181,10 @@ def build_required_features_from_raw(
     age = _require_raw_numeric(meal_info, "Age", min_value=0.0)
     gender = _require_raw_text(meal_info, "Gender")
     height = _require_raw_numeric(meal_info, "Height", min_value=0.0)
-    # Align with model training convention: Height stored in meters.
-    # Users commonly enter centimeters (e.g., 165), so normalize when value > 3.
-    if height > 3.0:
-        height = height / 100.0
+    height = _normalize_height_to_inches(height)
     bmi = _require_raw_numeric(meal_info, "BMI", min_value=0.0)
     body_weight = _require_raw_numeric(meal_info, "Body weight", min_value=0.0)
+    body_weight = _normalize_weight_to_pounds(body_weight)
 
     out = {
         "meal_type": meal_type,

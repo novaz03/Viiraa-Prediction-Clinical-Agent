@@ -22,9 +22,9 @@ def _sample_raw_input() -> dict:
             "Fasting GLU - PDL (Lab)": 95,
             "Age": 42,
             "Gender": "F",
-            "Height": 165,
+            "Height": 65,
             "BMI": 24.8,
-            "Body weight": 67.5,
+            "Body weight": 149,
         },
         "pre_glucose_series": [92, 93, 94, 95, 96, 97, 98, 99],
     }
@@ -73,6 +73,19 @@ class PhaseAContractTests(unittest.TestCase):
                 step_minutes=5.0,
                 baseline_window_minutes=30.0,
             )
+
+    def test_build_features_normalizes_metric_height_weight(self) -> None:
+        raw = _sample_raw_input()
+        raw["meal_info"]["Height"] = 165
+        raw["meal_info"]["Body weight"] = 67.5
+        feats = build_required_features_from_raw(
+            meal_info=raw["meal_info"],
+            pre_glucose_series=raw["pre_glucose_series"],
+            step_minutes=5.0,
+            baseline_window_minutes=30.0,
+        )
+        self.assertAlmostEqual(feats["Height"], 64.96062992125984, places=6)
+        self.assertAlmostEqual(feats["Body weight"], 148.81202697479486, places=6)
 
 
 if __name__ == "__main__":
