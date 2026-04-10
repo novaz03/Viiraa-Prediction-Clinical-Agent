@@ -78,6 +78,7 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - `personal_comparison` (deltas vs recent/median by `user_id` + user-history histogram when available)
 - `analysis_text` (verbose short-term and comparative interpretation)
 - Interval method uses fold-ensemble quantiles when fold models are available; `auc_120_abs` and `peak_amplitude` are constrained to nonnegative outputs.
+- Response also includes `peak_glucose_abs = premeal_baseline_glucose + peak_amplitude` for absolute peak-glucose interpretability.
 
 `POST /v1/diagnostics/raw-input` returns:
 - strict raw-contract metadata
@@ -185,6 +186,9 @@ The job log (`logs/viiraa_webapp_api.<JOBID>.out`) prints the SSH tunnel command
 - Derived fields (log and selected interactions) are auto-generated when possible.
 - Raw mode derives core glucose summary/slope features from pre-meal glucose sequence using fixed backend params (`step_minutes=5`, `baseline_window_minutes=30` by default).
 - Required raw fields in `meal_info` are strict; missing required meal/lab/demographic inputs are rejected (no default fill-in to 0 for required fields).
+- Demographics unit handling:
+  - `Height` is modeled in inches (`in`); UI supports `in/cm/m` and normalizes to inches.
+  - `Body weight` is modeled in pounds (`lb`); UI supports `lb/kg` and normalizes to pounds.
 - Premeal-derived fields can be hidden in UI while still used for prediction.
 - Product direction: keep one user-facing mode (meal + demographics + labs + pre-meal glucose series), with backend feature precomputation.
 - `/v1/predict` is raw-input only; direct engineered-feature submission is not part of the public user contract.

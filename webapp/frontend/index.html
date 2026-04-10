@@ -171,7 +171,12 @@
               </div>
               <div>
                 <label for="height">Height *</label>
-                <input id="height" type="number" step="any" placeholder="165" />
+                <input id="height" type="number" step="any" placeholder="65" />
+                <select id="heightUnit" style="margin-top: 6px;">
+                  <option value="in" selected>in</option>
+                  <option value="cm">cm</option>
+                  <option value="m">m</option>
+                </select>
               </div>
               <div>
                 <label for="bmi">BMI *</label>
@@ -179,7 +184,11 @@
               </div>
               <div>
                 <label for="bodyWeight">Body weight *</label>
-                <input id="bodyWeight" type="number" step="any" placeholder="67.5" />
+                <input id="bodyWeight" type="number" step="any" placeholder="149" />
+                <select id="bodyWeightUnit" style="margin-top: 6px;">
+                  <option value="lb" selected>lb</option>
+                  <option value="kg">kg</option>
+                </select>
               </div>
             </div>
           </div>
@@ -257,8 +266,10 @@
       const ageEl = document.getElementById("age");
       const genderEl = document.getElementById("gender");
       const heightEl = document.getElementById("height");
+      const heightUnitEl = document.getElementById("heightUnit");
       const bmiEl = document.getElementById("bmi");
       const bodyWeightEl = document.getElementById("bodyWeight");
+      const bodyWeightUnitEl = document.getElementById("bodyWeightUnit");
       const rawPreGlucoseEl = document.getElementById("rawPreGlucose");
 
       let lastRequestPayload = null;
@@ -299,9 +310,24 @@
         ageEl.value = "";
         genderEl.value = "F";
         heightEl.value = "";
+        heightUnitEl.value = "in";
         bmiEl.value = "";
         bodyWeightEl.value = "";
+        bodyWeightUnitEl.value = "lb";
         rawPreGlucoseEl.value = "";
+      }
+
+      function normalizeHeightToInches(heightValue, unit) {
+        const u = String(unit || "in").toLowerCase();
+        if (u === "cm") return heightValue / 2.54;
+        if (u === "m") return heightValue * 39.37007874015748;
+        return heightValue;
+      }
+
+      function normalizeWeightToPounds(weightValue, unit) {
+        const u = String(unit || "lb").toLowerCase();
+        if (u === "kg") return weightValue * 2.2046226218487757;
+        return weightValue;
       }
 
       function parseSeries() {
@@ -321,6 +347,11 @@
         if (series.length < 4) throw new Error("pre_glucose_series must have at least 4 values.");
         if (series.some((v) => !Number.isFinite(v))) throw new Error("pre_glucose_series must be numeric.");
 
+        const heightRaw = getRequiredNumber(heightEl, "Height");
+        const weightRaw = getRequiredNumber(bodyWeightEl, "Body weight");
+        const heightInches = normalizeHeightToInches(heightRaw, heightUnitEl.value);
+        const weightPounds = normalizeWeightToPounds(weightRaw, bodyWeightUnitEl.value);
+
         const mealInfo = {
           "meal_type": String(mealTypeEl.value || "Lunch"),
           "meal_calories": getRequiredNumber(mealCaloriesEl, "meal_calories"),
@@ -332,9 +363,9 @@
           "Fasting GLU - PDL (Lab)": getRequiredNumber(fastingLabEl, "Fasting GLU - PDL (Lab)"),
           "Age": getRequiredNumber(ageEl, "Age"),
           "Gender": String(genderEl.value || "").trim() || "F",
-          "Height": getRequiredNumber(heightEl, "Height"),
+          "Height": heightInches,
           "BMI": getRequiredNumber(bmiEl, "BMI"),
-          "Body weight": getRequiredNumber(bodyWeightEl, "Body weight"),
+          "Body weight": weightPounds,
         };
 
         return {
@@ -347,9 +378,9 @@
         };
       }
 
-      function riskBandFromPeak(peak) {
-        if (peak >= 60) return "high";
-        if (peak >= 40) return "moderate";
+      function riskBandFromPeakAbs(peakAbs) {
+        if (peakAbs >= 180) return "high";
+        if (peakAbs >= 160) return "moderate";
         return "low";
       }
 
@@ -357,14 +388,18 @@
         const preds = data.predictions || {};
         const intervals = data.prediction_intervals || {};
         resultsEl.innerHTML = "";
-        const order = ["auc_120_abs", "iauc_120", "peak_amplitude"];
+        const order = ["peak_glucose_abs", "auc_120_abs", "iauc_120"];
         for (const key of order) {
           const card = document.createElement("div");
           card.className = "metric";
           const v = Number(preds[key]);
           const ci95 = (intervals[key] || {}).ci_95 || [v, v];
-          const band = key === "peak_amplitude" ? riskBandFromPeak(v) : (v > 0 ? "moderate" : "low");
-          card.innerHTML = `<h4>${key}</h4><div class="value">${v.toFixed(2)}</div><div class="ci">95% CI: ${Number(ci95[0]).toFixed(2)} - ${Number(ci95[1]).toFixed(2)}</div><span class="pill ${band}">${band.toUpperCase()}</span>`;
+          const band = key === "peak_glucose_abs" ? riskBandFromPeakAbs(v) : (v > 0 ? "moderate" : "low");
+          let extra = "";
+          if (key === "peak_glucose_abs" && Number.isFinite(Number(preds.peak_amplitude))) {
+            extra = `<div class="ci">Peak increment: ${Number(preds.peak_amplitude).toFixed(2)}</div>`;
+          }
+          card.innerHTML = `<h4>${key}</h4><div class="value">${v.toFixed(2)}</div><div class="ci">95% CI: ${Number(ci95[0]).toFixed(2)} - ${Number(ci95[1]).toFixed(2)}</div>${extra}<span class="pill ${band}">${band.toUpperCase()}</span>`;
           resultsEl.appendChild(card);
         }
       }
@@ -513,8 +548,10 @@
           ageEl.value = m.Age ?? "";
           genderEl.value = m.Gender ?? "F";
           heightEl.value = m.Height ?? "";
+          heightUnitEl.value = "in";
           bmiEl.value = m.BMI ?? "";
           bodyWeightEl.value = m["Body weight"] ?? "";
+          bodyWeightUnitEl.value = "lb";
           rawPreGlucoseEl.value = (one.pre_glucose_series || []).join(", ");
           setStatus("Loaded example.");
         } catch (err) {
