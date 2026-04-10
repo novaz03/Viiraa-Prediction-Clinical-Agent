@@ -13,7 +13,11 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 ## API Endpoints
 - `GET /v1/healthz`
 - `GET /v1/example-input`
+- `GET /v1/example-response`
+- `GET /v1/reference-histograms/meal-types`
+- `GET /v1/reference-histograms?meal_type=<type>`
 - `GET /v1/expected-columns`
+- `GET /v1/ui-config`
 - `POST /v1/build-features-from-raw`
 - `POST /v1/predict`
 - `POST /v1/predict/batch`
@@ -24,8 +28,14 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
   "features": {
     "meal_type": "Lunch",
     "meal_calories": 650,
+    "Age": 42,
+    "Gender": "F",
+    "Height": 165,
+    "BMI": 24.8,
+    "Body weight": 67.5,
     "...": 0
   },
+  "user_id": "anonymous",
   "include_expected_columns": false
 }
 ```
@@ -39,13 +49,16 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
     "carbs_g": 70,
     "protein_g": 32,
     "fat_g": 22,
+    "Age": 42,
+    "Gender": "F",
+    "Height": 165,
+    "BMI": 24.8,
+    "Body weight": 67.5,
     "A1c PDL (Lab)": 5.7,
     "Fasting GLU - PDL (Lab)": 95,
     "minutes_since_last_meal": 180
   },
-  "pre_glucose_series": [94, 93, 92, 92, 93, 94],
-  "step_minutes": 5,
-  "baseline_window_minutes": 30
+  "pre_glucose_series": [94, 93, 92, 92, 93, 94]
 }
 ```
 
@@ -59,17 +72,32 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
       "carbs_g": 70,
       "protein_g": 32,
       "fat_g": 22,
+      "Age": 42,
+      "Gender": "F",
+      "Height": 165,
+      "BMI": 24.8,
+      "Body weight": 67.5,
       "A1c PDL (Lab)": 5.7,
       "Fasting GLU - PDL (Lab)": 95,
       "minutes_since_last_meal": 180
     },
-    "pre_glucose_series": [94, 93, 92, 92, 93, 94],
-    "step_minutes": 5,
-    "baseline_window_minutes": 30
+    "pre_glucose_series": [94, 93, 92, 92, 93, 94]
   },
+  "user_id": "anonymous",
   "include_expected_columns": false
 }
 ```
+
+`POST /v1/predict` now returns enriched fields:
+- `prediction_intervals` (`ci_80`, `ci_95` per target)
+- `cohort_comparison` (CGMacros-derived 30-bin histogram metadata + percentile by meal type)
+- `personal_comparison` (deltas vs recent/median by `user_id` + user-history histogram when available)
+- `analysis_text` (verbose short-term and comparative interpretation)
+
+`GET /v1/reference-histograms?meal_type=lunch` returns CGMacros-derived 30-bin reference histogram artifacts used by cohort comparisons.
+- Optional query params:
+  - `include_values=true` (return sample values for QA)
+  - `max_values=<N>` (cap value list length when `include_values=true`)
 
 `POST /v1/predict/batch` body:
 ```json
@@ -88,6 +116,11 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - `carbs_g`
 - `protein_g`
 - `fat_g`
+- `Age`
+- `Gender`
+- `Height`
+- `BMI`
+- `Body weight`
 - `A1c PDL (Lab)`
 - `Fasting GLU - PDL (Lab)`
 - `minutes_since_last_meal`
@@ -136,7 +169,11 @@ The job log (`logs/viiraa_webapp_api.<JOBID>.out`) prints the SSH tunnel command
 
 ## Notes
 - Current MVP enforces required core fields and imputes/derives additional non-required fields.
+- Demographics (`Age`, `Gender`, `Height`, `BMI`, `Body weight`) are now partially mandatory for prediction requests.
 - Derived fields (log and selected interactions) are auto-generated when possible.
-- Raw mode currently derives core glucose summary/slope features from pre-meal glucose sequence.
+- Raw mode derives core glucose summary/slope features from pre-meal glucose sequence using fixed backend params (`step_minutes=5`, `baseline_window_minutes=30` by default).
+- Premeal-derived fields can be hidden in UI while still used for prediction.
+- Product direction: keep one user-facing mode (meal + demographics + labs + pre-meal glucose series), with backend feature precomputation.
+- TODO: add database-backed storage for demographics/lab profile data so users can reuse saved profile values across sessions.
 - For research use only; not for diagnosis/treatment decisions.
 - Requests are logged to `webapp/logs/predict_requests.jsonl` (configurable via `SCALAR_MLP_LOG_PATH`).

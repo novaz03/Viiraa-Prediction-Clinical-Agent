@@ -132,5 +132,15 @@ def build_required_features_from_raw(
         "pre_glucose_valid_count": float(valid_vals.size),
         "pre_glucose_longest_gap": float(longest_gap),
         "premeal_baseline_glucose": baseline_mean_30m,
+        "Age": float(meal_info.get("Age", meal_info.get("age", 0.0))),
+        "Gender": str(meal_info.get("Gender", meal_info.get("gender", meal_info.get("sex", "")))),
+        "Height": float(meal_info.get("Height", meal_info.get("height", 0.0))),
+        "BMI": float(meal_info.get("BMI", meal_info.get("bmi", 0.0))),
+        "Body weight": float(
+            meal_info.get(
+                "Body weight",
+                meal_info.get("body_weight", meal_info.get("weight", meal_info.get("Weight", 0.0))),
+            )
+        ),
     }
     return out

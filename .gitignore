@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+logs/*.err
+logs/*.out
+.codex
+lib_check

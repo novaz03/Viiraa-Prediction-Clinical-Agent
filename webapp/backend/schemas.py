@@ -8,8 +8,6 @@ from pydantic import BaseModel, Field
 class RawFeatureBuildRequest(BaseModel):
     meal_info: Dict[str, Any] = Field(default_factory=dict)
     pre_glucose_series: List[Any] = Field(default_factory=list)
-    step_minutes: float = 5.0
-    baseline_window_minutes: float = 30.0
 
 
 class RawInputPayload(RawFeatureBuildRequest):
@@ -20,6 +18,7 @@ class PredictRequest(BaseModel):
     features: Dict[str, Any] = Field(default_factory=dict)
     raw_input: Optional[RawInputPayload] = None
     include_expected_columns: bool = False
+    user_id: str = "anonymous"
 
 
 class PredictBatchRequest(BaseModel):
@@ -30,6 +29,10 @@ class PredictBatchRequest(BaseModel):
 class PredictResponse(BaseModel):
     request_id: str
     predictions: Dict[str, float]
+    prediction_intervals: Optional[Dict[str, Dict[str, List[float]]]] = None
+    cohort_comparison: Optional[Dict[str, Any]] = None
+    personal_comparison: Optional[Dict[str, Any]] = None
+    analysis_text: Optional[Dict[str, str]] = None
     model_family: str
     notes: List[str]
     features_used: Optional[Dict[str, Any]] = None

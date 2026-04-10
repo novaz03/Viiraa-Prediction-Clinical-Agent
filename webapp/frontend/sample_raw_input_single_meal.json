@@ -6,6 +6,11 @@
       "carbs_g": 70,
       "protein_g": 32,
       "fat_g": 22,
+      "Age": 42,
+      "Gender": "F",
+      "Height": 165,
+      "BMI": 24.8,
+      "Body weight": 67.5,
       "A1c PDL (Lab)": 5.7,
       "Fasting GLU - PDL (Lab)": 95,
       "minutes_since_last_meal": 180

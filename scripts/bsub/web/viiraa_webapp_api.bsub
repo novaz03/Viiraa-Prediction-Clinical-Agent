@@ -55,7 +55,28 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 export PYTHON_BIN
-export PYTHONPATH="$PWD"
+
+# Include sibling training repo on PYTHONPATH for models.run_scalar_mlp import.
+EXTRA_PYTHONPATH=""
+if [ -d /scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction ]; then
+  EXTRA_PYTHONPATH="/scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction"
+elif [ -d /storage1/fs1/nlin/Active/sizhe_shadow_min/scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction ]; then
+  EXTRA_PYTHONPATH="/storage1/fs1/nlin/Active/sizhe_shadow_min/scratch1/fs1/nlin/sizhe/Viiraa/Viiraa-Prediction"
+elif [ -d "$(dirname "$PWD")/Viiraa-Prediction" ]; then
+  EXTRA_PYTHONPATH="$(dirname "$PWD")/Viiraa-Prediction"
+fi
+
+if [ -n "${EXTRA_PYTHONPATH}" ]; then
+  export PYTHONPATH="$PWD:${EXTRA_PYTHONPATH}"
+else
+  export PYTHONPATH="$PWD"
+fi
+
+if [ -n "${EXTRA_PYTHONPATH}" ]; then
+  export SCALAR_MLP_MODEL_ROOT="${EXTRA_PYTHONPATH}/outputs/experiments/scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_cwttarget/final_models"
+  export SCALAR_MLP_EXAMPLE_PATH="${EXTRA_PYTHONPATH}/examples/mlp_models/sample_input_single_meal.json"
+fi
+
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1

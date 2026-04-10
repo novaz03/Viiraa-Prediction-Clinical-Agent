@@ -80,4 +80,4 @@ echo "[submit-webapp] port=${PORT}"
 echo "[submit-webapp] SHADOW=${SHADOW}"
 echo "[submit-webapp] LSF_DOCKER_PORTS=${LSF_DOCKER_PORTS}"
 
-bsub -q "${QUEUE}" < scripts/bsub/web/viiraa_webapp_api.bsub
+bsub -q "${QUEUE}" -R "select[port${PORT}=1]" < scripts/bsub/web/viiraa_webapp_api.bsub
