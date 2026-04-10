@@ -4,6 +4,22 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+REQUIRED_MEAL_INFO_ALIASES: Dict[str, List[str]] = {
+    "meal_type": ["meal_type"],
+    "meal_calories": ["meal_calories"],
+    "carbs_g": ["carbs_g"],
+    "protein_g": ["protein_g"],
+    "fat_g": ["fat_g"],
+    "minutes_since_last_meal": ["minutes_since_last_meal"],
+    "A1c PDL (Lab)": ["A1c PDL (Lab)", "a1c_lab"],
+    "Fasting GLU - PDL (Lab)": ["Fasting GLU - PDL (Lab)", "fasting_glu_lab"],
+    "Age": ["Age", "age"],
+    "Gender": ["Gender", "gender", "sex", "Sex"],
+    "Height": ["Height", "height"],
+    "BMI": ["BMI", "bmi"],
+    "Body weight": ["Body weight", "body_weight", "weight", "Weight"],
+}
+
 
 def _safe_float(x: Any) -> Optional[float]:
     if x is None:
@@ -43,12 +59,43 @@ def _longest_missing_gap_minutes(raw: List[Any], step_minutes: float) -> float:
     return float(longest) * float(step_minutes)
 
 
+def _require_raw_value(meal_info: Dict[str, Any], canonical: str) -> Any:
+    for key in REQUIRED_MEAL_INFO_ALIASES.get(canonical, [canonical]):
+        if key in meal_info and meal_info[key] not in (None, ""):
+            return meal_info[key]
+    raise ValueError(f"Missing required raw field in meal_info: `{canonical}`")
+
+
+def _require_raw_numeric(meal_info: Dict[str, Any], canonical: str, *, min_value: float | None = None) -> float:
+    val = _require_raw_value(meal_info, canonical)
+    try:
+        out = float(val)
+    except Exception as exc:
+        raise ValueError(f"Raw field `{canonical}` must be numeric.") from exc
+    if not np.isfinite(out):
+        raise ValueError(f"Raw field `{canonical}` must be finite.")
+    if min_value is not None and out < min_value:
+        raise ValueError(f"Raw field `{canonical}` must be >= {min_value}.")
+    return out
+
+
+def _require_raw_text(meal_info: Dict[str, Any], canonical: str) -> str:
+    val = _require_raw_value(meal_info, canonical)
+    out = str(val).strip()
+    if not out:
+        raise ValueError(f"Raw field `{canonical}` must be non-empty.")
+    return out
+
+
 def build_required_features_from_raw(
     meal_info: Dict[str, Any],
     pre_glucose_series: List[Any],
     step_minutes: float = 5.0,
     baseline_window_minutes: float = 30.0,
 ) -> Dict[str, Any]:
+    if not isinstance(meal_info, dict):
+        raise ValueError("meal_info must be a JSON object.")
+
     if not isinstance(pre_glucose_series, list) or len(pre_glucose_series) < 4:
         raise ValueError("pre_glucose_series must be a list with at least 4 values.")
 
@@ -105,17 +152,29 @@ def build_required_features_from_raw(
     cv = std / max(abs(mean_all), 1e-6)
     iqr = float(np.percentile(valid_vals, 75) - np.percentile(valid_vals, 25))
 
+    meal_type = _require_raw_text(meal_info, "meal_type")
+    meal_calories = _require_raw_numeric(meal_info, "meal_calories", min_value=0.0)
+    carbs_g = _require_raw_numeric(meal_info, "carbs_g", min_value=0.0)
+    protein_g = _require_raw_numeric(meal_info, "protein_g", min_value=0.0)
+    fat_g = _require_raw_numeric(meal_info, "fat_g", min_value=0.0)
+    minutes_since_last_meal = _require_raw_numeric(meal_info, "minutes_since_last_meal", min_value=0.0)
+    a1c_lab = _require_raw_numeric(meal_info, "A1c PDL (Lab)", min_value=0.0)
+    fasting_lab = _require_raw_numeric(meal_info, "Fasting GLU - PDL (Lab)", min_value=0.0)
+    age = _require_raw_numeric(meal_info, "Age", min_value=0.0)
+    gender = _require_raw_text(meal_info, "Gender")
+    height = _require_raw_numeric(meal_info, "Height", min_value=0.0)
+    bmi = _require_raw_numeric(meal_info, "BMI", min_value=0.0)
+    body_weight = _require_raw_numeric(meal_info, "Body weight", min_value=0.0)
+
     out = {
-        "meal_type": str(meal_info.get("meal_type", "Lunch")),
-        "meal_calories": float(meal_info.get("meal_calories", 0.0)),
-        "carbs_g": float(meal_info.get("carbs_g", 0.0)),
-        "protein_g": float(meal_info.get("protein_g", 0.0)),
-        "fat_g": float(meal_info.get("fat_g", 0.0)),
-        "A1c PDL (Lab)": float(meal_info.get("A1c PDL (Lab)", meal_info.get("a1c_lab", 0.0))),
-        "Fasting GLU - PDL (Lab)": float(
-            meal_info.get("Fasting GLU - PDL (Lab)", meal_info.get("fasting_glu_lab", 0.0))
-        ),
-        "minutes_since_last_meal": float(meal_info.get("minutes_since_last_meal", 0.0)),
+        "meal_type": meal_type,
+        "meal_calories": meal_calories,
+        "carbs_g": carbs_g,
+        "protein_g": protein_g,
+        "fat_g": fat_g,
+        "A1c PDL (Lab)": a1c_lab,
+        "Fasting GLU - PDL (Lab)": fasting_lab,
+        "minutes_since_last_meal": minutes_since_last_meal,
         "baseline_glucose_median_30m": baseline_median_30m,
         "baseline_glucose_mean_30m": baseline_mean_30m,
         "pre_glucose_min_180m": mn,
@@ -132,15 +191,10 @@ def build_required_features_from_raw(
         "pre_glucose_valid_count": float(valid_vals.size),
         "pre_glucose_longest_gap": float(longest_gap),
         "premeal_baseline_glucose": baseline_mean_30m,
-        "Age": float(meal_info.get("Age", meal_info.get("age", 0.0))),
-        "Gender": str(meal_info.get("Gender", meal_info.get("gender", meal_info.get("sex", "")))),
-        "Height": float(meal_info.get("Height", meal_info.get("height", 0.0))),
-        "BMI": float(meal_info.get("BMI", meal_info.get("bmi", 0.0))),
-        "Body weight": float(
-            meal_info.get(
-                "Body weight",
-                meal_info.get("body_weight", meal_info.get("weight", meal_info.get("Weight", 0.0))),
-            )
-        ),
+        "Age": age,
+        "Gender": gender,
+        "Height": height,
+        "BMI": bmi,
+        "Body weight": body_weight,
     }
     return out

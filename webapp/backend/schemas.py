@@ -15,14 +15,13 @@ class RawInputPayload(RawFeatureBuildRequest):
 
 
 class PredictRequest(BaseModel):
-    features: Dict[str, Any] = Field(default_factory=dict)
-    raw_input: Optional[RawInputPayload] = None
+    raw_input: RawInputPayload
     include_expected_columns: bool = False
     user_id: str = "anonymous"
 
 
 class PredictBatchRequest(BaseModel):
-    items: List[Dict[str, Any]] = Field(default_factory=list)
+    items: List[RawInputPayload] = Field(default_factory=list)
     include_expected_columns: bool = False
 
 

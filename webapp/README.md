@@ -19,26 +19,9 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - `GET /v1/expected-columns`
 - `GET /v1/ui-config`
 - `POST /v1/build-features-from-raw`
+- `POST /v1/diagnostics/raw-input`
 - `POST /v1/predict`
 - `POST /v1/predict/batch`
-
-`POST /v1/predict` body (engineered features mode):
-```json
-{
-  "features": {
-    "meal_type": "Lunch",
-    "meal_calories": 650,
-    "Age": 42,
-    "Gender": "F",
-    "Height": 165,
-    "BMI": 24.8,
-    "Body weight": 67.5,
-    "...": 0
-  },
-  "user_id": "anonymous",
-  "include_expected_columns": false
-}
-```
 
 `POST /v1/build-features-from-raw` body:
 ```json
@@ -62,7 +45,7 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 }
 ```
 
-`POST /v1/predict` body (raw mode, one-call derive + predict):
+`POST /v1/predict` body (single user-facing mode; one-call derive + predict):
 ```json
 {
   "raw_input": {
@@ -93,6 +76,12 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - `cohort_comparison` (CGMacros-derived 30-bin histogram metadata + percentile by meal type)
 - `personal_comparison` (deltas vs recent/median by `user_id` + user-history histogram when available)
 - `analysis_text` (verbose short-term and comparative interpretation)
+- Interval method uses fold-ensemble quantiles when fold models are available; `auc_120_abs` and `peak_amplitude` are constrained to nonnegative outputs.
+
+`POST /v1/diagnostics/raw-input` returns:
+- strict raw-contract metadata
+- exact `features_used_for_model` after preprocessing
+- predictions + intervals (same model path as `/v1/predict`)
 
 `GET /v1/reference-histograms?meal_type=lunch` returns CGMacros-derived 30-bin reference histogram artifacts used by cohort comparisons.
 - Optional query params:
@@ -103,14 +92,30 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 ```json
 {
   "items": [
-    { "meal_type": "Lunch", "meal_calories": 650, "...": 0 },
-    { "meal_type": "Dinner", "meal_calories": 540, "...": 0 }
+    {
+      "meal_info": {
+        "meal_type": "Lunch",
+        "meal_calories": 650,
+        "carbs_g": 70,
+        "protein_g": 32,
+        "fat_g": 22,
+        "Age": 42,
+        "Gender": "F",
+        "Height": 165,
+        "BMI": 24.8,
+        "Body weight": 67.5,
+        "A1c PDL (Lab)": 5.7,
+        "Fasting GLU - PDL (Lab)": 95,
+        "minutes_since_last_meal": 180
+      },
+      "pre_glucose_series": [94, 93, 92, 92, 93, 94]
+    }
   ],
   "include_expected_columns": false
 }
 ```
 
-## Required Fields (current strict contract)
+## Required Model Features (auto-derived + direct input)
 - `meal_type`
 - `meal_calories`
 - `carbs_g`
@@ -172,8 +177,10 @@ The job log (`logs/viiraa_webapp_api.<JOBID>.out`) prints the SSH tunnel command
 - Demographics (`Age`, `Gender`, `Height`, `BMI`, `Body weight`) are now partially mandatory for prediction requests.
 - Derived fields (log and selected interactions) are auto-generated when possible.
 - Raw mode derives core glucose summary/slope features from pre-meal glucose sequence using fixed backend params (`step_minutes=5`, `baseline_window_minutes=30` by default).
+- Required raw fields in `meal_info` are strict; missing required meal/lab/demographic inputs are rejected (no default fill-in to 0 for required fields).
 - Premeal-derived fields can be hidden in UI while still used for prediction.
 - Product direction: keep one user-facing mode (meal + demographics + labs + pre-meal glucose series), with backend feature precomputation.
+- `/v1/predict` is raw-input only; direct engineered-feature submission is not part of the public user contract.
 - TODO: add database-backed storage for demographics/lab profile data so users can reuse saved profile values across sessions.
 - For research use only; not for diagnosis/treatment decisions.
 - Requests are logged to `webapp/logs/predict_requests.jsonl` (configurable via `SCALAR_MLP_LOG_PATH`).

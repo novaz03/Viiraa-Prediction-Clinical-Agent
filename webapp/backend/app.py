@@ -26,49 +26,18 @@ from .schemas import (
     RawFeatureBuildRequest,
     RawFeatureBuildResponse,
 )
+from .validation import (
+    REQUIRED_DEMOGRAPHIC_CATEGORICAL,
+    REQUIRED_DEMOGRAPHIC_NUMERIC,
+    validate_and_normalize_features,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_ROOT = REPO_ROOT / "outputs/experiments/scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_cwttarget/final_models"
-DEFAULT_EXAMPLE = REPO_ROOT / "examples/mlp_models/sample_input_single_meal.json"
+DEFAULT_EXAMPLE = REPO_ROOT / "webapp/frontend/sample_raw_input_single_meal.json"
 DEFAULT_LOG_PATH = REPO_ROOT / "webapp/logs/predict_requests.jsonl"
 FRONTEND_DIR = REPO_ROOT / "webapp/frontend"
-REQUIRED_FIELDS = [
-    "meal_type",
-    "meal_calories",
-    "carbs_g",
-    "protein_g",
-    "fat_g",
-    "A1c PDL (Lab)",
-    "Fasting GLU - PDL (Lab)",
-    "minutes_since_last_meal",
-    "baseline_glucose_median_30m",
-    "baseline_glucose_mean_30m",
-    "pre_glucose_min_180m",
-    "pre_glucose_max_180m",
-    "pre_glucose_range_180m",
-    "pre_glucose_iqr_180m",
-    "pre_glucose_std_180m",
-    "pre_glucose_cv_180m",
-    "glucose_slope_180_60",
-    "glucose_slope_60_15",
-    "glucose_slope_15_0",
-    "glucose_slope_recent_minus_early",
-    "pre_glucose_missing_frac",
-    "pre_glucose_valid_count",
-    "pre_glucose_longest_gap",
-    "premeal_baseline_glucose",
-]
-NUMERIC_REQUIRED = [f for f in REQUIRED_FIELDS if f != "meal_type"]
-REQUIRED_DEMOGRAPHIC_NUMERIC = ["Age", "BMI", "Height", "Body weight"]
-REQUIRED_DEMOGRAPHIC_CATEGORICAL = ["Gender"]
-DEMO_ALIASES: Dict[str, list[str]] = {
-    "Age": ["Age", "age"],
-    "Gender": ["Gender", "gender", "sex", "Sex"],
-    "BMI": ["BMI", "bmi"],
-    "Height": ["Height", "height"],
-    "Body weight": ["Body weight", "body_weight", "weight", "Weight"],
-}
 HIDDEN_PREMEAL_FIELDS = [
     "pre_glucose_min_180m",
     "pre_glucose_max_180m",
@@ -196,48 +165,6 @@ def _load_cgmacros_reference_distributions() -> Dict[str, Dict[str, np.ndarray]]
 CGMACROS_REFERENCE = _load_cgmacros_reference_distributions()
 
 
-def _validate_and_normalize_features(features: Dict[str, Any]) -> Dict[str, Any]:
-    if not isinstance(features, dict):
-        raise HTTPException(status_code=422, detail="`features` must be a JSON object.")
-
-    missing = [k for k in REQUIRED_FIELDS if k not in features]
-    if missing:
-        raise HTTPException(status_code=422, detail=f"Missing required fields: {missing}")
-
-    out = dict(features)
-    for canonical, aliases in DEMO_ALIASES.items():
-        if canonical in out and out[canonical] not in (None, ""):
-            continue
-        for alias in aliases:
-            if alias in out and out[alias] not in (None, ""):
-                out[canonical] = out[alias]
-                break
-
-    for col in NUMERIC_REQUIRED:
-        try:
-            out[col] = float(out[col])
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=f"Field `{col}` must be numeric.") from exc
-
-    for col in REQUIRED_DEMOGRAPHIC_NUMERIC:
-        if col not in out:
-            raise HTTPException(status_code=422, detail=f"Missing required demographic field: {col}")
-        try:
-            out[col] = float(out[col])
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=f"Demographic field `{col}` must be numeric.") from exc
-        if not np.isfinite(out[col]) or float(out[col]) <= 0:
-            raise HTTPException(status_code=422, detail=f"Demographic field `{col}` must be > 0.")
-
-    for col in REQUIRED_DEMOGRAPHIC_CATEGORICAL:
-        if col not in out or str(out[col]).strip() == "":
-            raise HTTPException(status_code=422, detail=f"Missing required demographic field: {col}")
-        out[col] = str(out[col]).strip()
-
-    out["meal_type"] = str(out["meal_type"])
-    return out
-
-
 def _build_required_features_or_422(req: RawFeatureBuildRequest) -> Dict[str, Any]:
     try:
         raw_feats = build_required_features_from_raw(
@@ -250,7 +177,10 @@ def _build_required_features_or_422(req: RawFeatureBuildRequest) -> Dict[str, An
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Failed to build features: {exc}") from exc
-    return _validate_and_normalize_features(raw_feats)
+    try:
+        return validate_and_normalize_features(raw_feats)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def _cohort_values_from_logs(metric: str, meal_type: str) -> np.ndarray:
@@ -458,7 +388,8 @@ def healthz() -> Dict[str, str]:
 @app.get("/v1/example-input")
 def get_example_input() -> Dict[str, Any]:
     try:
-        return {"features": service.load_example(example_path)}
+        payload = service.load_example(example_path)
+        return {"raw_input": payload}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to load example input: {exc}") from exc
 
@@ -466,7 +397,8 @@ def get_example_input() -> Dict[str, Any]:
 @app.get("/v1/example-response")
 def example_response() -> Dict[str, Any]:
     try:
-        features = service.load_example(example_path)
+        raw_payload = service.load_example(example_path)
+        features = _build_required_features_or_422(RawFeatureBuildRequest(**raw_payload))
         preds, intervals, _ = service.predict_with_intervals(features)
         meal_type = str(features.get("meal_type", "Lunch"))
         cohort = _build_cohort_comparison(meal_type=meal_type, preds=preds)
@@ -530,6 +462,22 @@ def build_features_from_raw(req: RawFeatureBuildRequest) -> RawFeatureBuildRespo
     return RawFeatureBuildResponse(features=_build_required_features_or_422(req))
 
 
+@app.post("/v1/diagnostics/raw-input")
+def diagnostics_raw_input(req: RawFeatureBuildRequest) -> Dict[str, Any]:
+    features = _build_required_features_or_422(req)
+    preds, intervals, ci_method = service.predict_with_intervals(features)
+    return {
+        "raw_contract": {
+            "strict_required_fields": True,
+            "default_fill_for_required_raw_fields": False,
+        },
+        "features_used_for_model": features,
+        "predictions": preds,
+        "prediction_intervals": intervals,
+        "ci_method": ci_method,
+    }
+
+
 @app.get("/v1/logs/recent")
 def recent_logs(limit: int = 20) -> Dict[str, Any]:
     n = max(1, min(int(limit), 200))
@@ -540,10 +488,7 @@ def recent_logs(limit: int = 20) -> Dict[str, Any]:
 def predict(req: PredictRequest) -> PredictResponse:
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
-    if req.raw_input is not None:
-        features = _build_required_features_or_422(req.raw_input)
-    else:
-        features = _validate_and_normalize_features(req.features)
+    features = _build_required_features_or_422(req.raw_input)
 
     try:
         preds, intervals, ci_method = service.predict_with_intervals(features)
@@ -566,10 +511,11 @@ def predict(req: PredictRequest) -> PredictResponse:
 
     notes = [
         "This endpoint predicts scalar targets from provided meal/glucose context.",
-        "Supports either `features` (engineered fields) or `raw_input` (meal info + pre-glucose sequence).",
-        "Confidence intervals use fold-model ensemble spread when available.",
+        "Accepts a single user-facing raw payload (`meal_info` + `pre_glucose_series`) and computes engineered features server-side.",
+        "Confidence intervals use fold-ensemble quantile intervals when fold checkpoints are available.",
         "Cohort comparison uses CGMacros-derived same-meal-type OOF distributions with 30-bin histograms.",
         "Personal comparison includes user-history percentiles and 30-bin histograms when enough history is available.",
+        "AUC-abs and peak-amplitude predictions are constrained to nonnegative values in postprocessing.",
         "Use for research workflows; not for diagnosis or treatment decisions.",
     ]
 
@@ -583,7 +529,7 @@ def predict(req: PredictRequest) -> PredictResponse:
         analysis_text=analysis_text,
         model_family="scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_cwttarget/final_models",
         notes=notes,
-        features_used=features if req.raw_input is not None else None,
+        features_used=features,
         expected_columns=expected,
     )
     _append_log(
@@ -612,7 +558,7 @@ def predict_batch(req: PredictBatchRequest) -> PredictBatchResponse:
     preds_all = []
     try:
         for item in req.items:
-            features = _validate_and_normalize_features(item)
+            features = _build_required_features_or_422(item)
             preds_all.append(service.predict_one(features))
     except HTTPException:
         raise
@@ -630,8 +576,8 @@ def predict_batch(req: PredictBatchRequest) -> PredictBatchResponse:
         raise HTTPException(status_code=400, detail=f"Batch inference failed: {exc}") from exc
 
     notes = [
-        "Batch endpoint predicts scalar targets for each feature object in `items`.",
-        "All items must satisfy required input fields and numeric typing.",
+        "Batch endpoint predicts scalar targets for each raw input object in `items`.",
+        "Each item requires `meal_info` + `pre_glucose_series`; engineered features are computed server-side.",
         "Use for research workflows; not for diagnosis or treatment decisions.",
     ]
     expected = service.expected_columns() if req.include_expected_columns else None

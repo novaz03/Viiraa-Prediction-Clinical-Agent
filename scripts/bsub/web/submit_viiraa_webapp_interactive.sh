@@ -110,7 +110,7 @@ set -euo pipefail
 cd "${REPO_ROOT}"
 export PYTHONPATH="${REPO_ROOT}:${PRED_REPO}"
 export SCALAR_MLP_MODEL_ROOT="${PRED_REPO}/outputs/experiments/scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_cwttarget/final_models"
-export SCALAR_MLP_EXAMPLE_PATH="${PRED_REPO}/examples/mlp_models/sample_input_single_meal.json"
+export SCALAR_MLP_EXAMPLE_PATH="${PRED_REPO}/examples/mlp_models/sample_raw_input_single_meal.json"
 HOST_SHORT=\$(hostname -s 2>/dev/null || hostname)
 HOST_FQDN=\$(hostname -f 2>/dev/null || hostname)
 echo "[webapp] host=\${HOST_FQDN}"
