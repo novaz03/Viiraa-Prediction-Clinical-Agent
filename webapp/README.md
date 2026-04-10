@@ -20,6 +20,7 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - `GET /v1/ui-config`
 - `POST /v1/build-features-from-raw`
 - `POST /v1/diagnostics/raw-input`
+- `POST /v1/diagnostics/numeric-zscores`
 - `POST /v1/predict`
 - `POST /v1/predict/batch`
 
@@ -82,6 +83,12 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 - strict raw-contract metadata
 - exact `features_used_for_model` after preprocessing
 - predictions + intervals (same model path as `/v1/predict`)
+
+`POST /v1/diagnostics/numeric-zscores` returns per-target numeric feature diagnostics:
+- `feature`
+- `value` (final numeric value used)
+- `z` ((value - train_mean) / train_std from checkpoint preprocess)
+- `imputed` (true if missing and replaced with checkpoint median)
 
 `GET /v1/reference-histograms?meal_type=lunch` returns CGMacros-derived 30-bin reference histogram artifacts used by cohort comparisons.
 - Optional query params:

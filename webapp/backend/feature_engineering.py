@@ -163,6 +163,10 @@ def build_required_features_from_raw(
     age = _require_raw_numeric(meal_info, "Age", min_value=0.0)
     gender = _require_raw_text(meal_info, "Gender")
     height = _require_raw_numeric(meal_info, "Height", min_value=0.0)
+    # Align with model training convention: Height stored in meters.
+    # Users commonly enter centimeters (e.g., 165), so normalize when value > 3.
+    if height > 3.0:
+        height = height / 100.0
     bmi = _require_raw_numeric(meal_info, "BMI", min_value=0.0)
     body_weight = _require_raw_numeric(meal_info, "Body weight", min_value=0.0)
 
@@ -188,7 +192,8 @@ def build_required_features_from_raw(
         "glucose_slope_15_0": slope_15_0,
         "glucose_slope_recent_minus_early": slope_recent_minus_early,
         "pre_glucose_missing_frac": float(missing_frac),
-        "pre_glucose_valid_count": float(valid_vals.size),
+        # Training used minute-scale valid-coverage for this field.
+        "pre_glucose_valid_count": float(valid_vals.size) * float(step_minutes),
         "pre_glucose_longest_gap": float(longest_gap),
         "premeal_baseline_glucose": baseline_mean_30m,
         "Age": age,

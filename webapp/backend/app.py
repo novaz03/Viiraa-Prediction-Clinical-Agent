@@ -478,6 +478,15 @@ def diagnostics_raw_input(req: RawFeatureBuildRequest) -> Dict[str, Any]:
     }
 
 
+@app.post("/v1/diagnostics/numeric-zscores")
+def diagnostics_numeric_zscores(req: RawFeatureBuildRequest) -> Dict[str, Any]:
+    features = _build_required_features_or_422(req)
+    return {
+        "features_used_for_model": features,
+        "numeric_zscores": service.numeric_zscores(features),
+    }
+
+
 @app.get("/v1/logs/recent")
 def recent_logs(limit: int = 20) -> Dict[str, Any]:
     n = max(1, min(int(limit), 200))

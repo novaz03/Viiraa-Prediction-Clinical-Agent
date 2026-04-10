@@ -64,12 +64,13 @@ def _derive_features(row: Dict[str, Any]) -> Dict[str, Any]:
 
     macro_cals = carbs * 4.0 + protein * 4.0 + fat * 9.0
     if macro_cals > 0.0:
+        # Training expects macro-calorie fractions in [0, 1], not percentages.
         if "pct_macro_cals_carbs" not in out:
-            out["pct_macro_cals_carbs"] = 100.0 * carbs * 4.0 / macro_cals
+            out["pct_macro_cals_carbs"] = carbs * 4.0 / macro_cals
         if "pct_macro_cals_protein" not in out:
-            out["pct_macro_cals_protein"] = 100.0 * protein * 4.0 / macro_cals
+            out["pct_macro_cals_protein"] = protein * 4.0 / macro_cals
         if "pct_macro_cals_fat" not in out:
-            out["pct_macro_cals_fat"] = 100.0 * fat * 9.0 / macro_cals
+            out["pct_macro_cals_fat"] = fat * 9.0 / macro_cals
 
     if "interaction_mins_since_last_x_carbs" not in out:
         out["interaction_mins_since_last_x_carbs"] = mins_last * carbs
@@ -244,6 +245,38 @@ class ScalarMLPInferenceService:
         cols = set(self.expected_columns()["union"])
         keys = ("age", "sex", "gender", "height", "weight", "bmi", "race", "ethnicity")
         out = [c for c in sorted(cols) if any(k in c.lower() for k in keys)]
+        return out
+
+    def numeric_zscores(self, features: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        row = _derive_features(features)
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        for target, loaded in self.models.items():
+            pre = loaded.ckpt["preprocess"]
+            means = np.asarray(pre["num_means"], dtype=np.float64)
+            stds = np.asarray(pre["num_stds"], dtype=np.float64)
+            medians = np.asarray(pre["num_medians"], dtype=np.float64)
+            rows: List[Dict[str, Any]] = []
+            for i, col in enumerate(loaded.numeric_cols):
+                raw_val = row.get(col, np.nan)
+                imputed = False
+                try:
+                    val = float(raw_val)
+                except Exception:
+                    val = float("nan")
+                if not np.isfinite(val):
+                    val = float(medians[i])
+                    imputed = True
+                denom = float(stds[i]) if abs(float(stds[i])) > 1e-12 else 1.0
+                z = (float(val) - float(means[i])) / denom
+                rows.append(
+                    {
+                        "feature": col,
+                        "value": float(val),
+                        "z": float(z),
+                        "imputed": bool(imputed),
+                    }
+                )
+            out[target] = rows
         return out
 
     @staticmethod
