@@ -6,116 +6,284 @@
     <title>Viiraa Blood Glucose Analysis</title>
     <style>
       :root {
-        --bg-top: #f0eee7;
-        --bg-bottom: #dce8e7;
+        --bg: #f4f6f7;
         --panel: #ffffff;
-        --panel-soft: #f8faf8;
-        --text: #1a2524;
-        --muted: #5f6e69;
-        --line: #d8e1dd;
-        --teal: #0d766f;
-        --red: #b42318;
-        --ink: #103134;
+        --panel-soft: #f8fbfb;
+        --text: #172423;
+        --muted: #5f6f6b;
+        --line: #d7e2de;
+        --accent: #0b6f69;
+        --accent-soft: #e6f3f1;
+        --warn: #916100;
+        --warn-bg: #fff7df;
+        --danger: #8f2f2a;
+        --danger-bg: #fde8e6;
+        --ok: #176447;
+        --ok-bg: #e3f6ec;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         color: var(--text);
-        background: radial-gradient(circle at 10% 15%, #ffffff 0%, transparent 36%), radial-gradient(circle at 90% 0%, #caebe8 0%, transparent 34%), linear-gradient(145deg, var(--bg-top), var(--bg-bottom));
+        background: radial-gradient(circle at 95% 0%, #dff3f0 0%, transparent 28%), var(--bg);
         font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
       }
-      .wrap { max-width: 1240px; margin: 22px auto 36px; padding: 0 14px; }
-      .headline { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; margin-bottom: 12px; }
-      .hero, .hero-note { border: 1px solid rgba(255,255,255,0.5); border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.58); }
-      h1 { margin: 0 0 6px; font-size: 1.95rem; letter-spacing: -0.03em; }
-      .sub, .small { color: var(--muted); }
-      .chip-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-      .chip { border: 1px solid #c6d3cd; border-radius: 999px; padding: 5px 10px; color: #355049; font-size: 0.78rem; }
-      .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
-      .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-      button { border: 0; border-radius: 9px; padding: 9px 12px; font-weight: 680; font-size: 0.86rem; cursor: pointer; }
-      button:disabled { opacity: 0.62; cursor: not-allowed; }
-      .primary { background: var(--teal); color: #fff; }
-      .secondary { background: #e4ebea; color: #223635; }
-      .status { border: 1px solid #cde0db; border-radius: 10px; background: #f3faf8; color: #114f4b; font-size: 0.84rem; padding: 8px 10px; margin-bottom: 10px; min-height: 36px; display: flex; align-items: center; }
-      .err { color: var(--red); white-space: pre-wrap; margin-top: 6px; margin-bottom: 10px; }
-      .section { border: 1px dashed var(--line); border-radius: 11px; padding: 10px; margin-bottom: 10px; background: var(--panel-soft); }
-      .section h3 { margin: 0 0 8px; font-size: 0.94rem; }
-      .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+      .wrap { max-width: 1380px; margin: 20px auto 30px; padding: 0 14px; }
+      .top {
+        display: grid;
+        grid-template-columns: 1.7fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .hero, .meta {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 14px;
+      }
+      h1 { margin: 0 0 6px; font-size: 2rem; letter-spacing: -0.03em; }
+      .sub { color: var(--muted); margin: 0; }
+      .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .chip { border: 1px solid #c5d8d2; border-radius: 999px; padding: 4px 10px; color: #2f4f4a; font-size: 0.78rem; }
+      .small { color: var(--muted); font-size: 0.83rem; }
+      .helper { color: var(--muted); font-size: 0.76rem; }
+      .research-banner {
+        margin-top: 8px;
+        border: 1px solid #b5d6cf;
+        border-radius: 10px;
+        background: #eefaf7;
+        padding: 8px;
+        font-size: 0.82rem;
+        color: #215048;
+      }
+      .main {
+        display: grid;
+        grid-template-columns: minmax(660px, 1.25fr) minmax(420px, 0.9fr);
+        gap: 14px;
+        align-items: start;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 12px;
+      }
+      .stage-title {
+        margin: 0 0 6px;
+        font-size: 1.06rem;
+      }
+      .stage-note {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+      .section {
+        border: 1px solid #e2ebe8;
+        border-radius: 11px;
+        background: var(--panel-soft);
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .section h3 { margin: 0 0 8px; font-size: 0.93rem; }
+      .fields {
+        display: grid;
+        gap: 8px;
+      }
+      .row-2 { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .row-3 { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .row-4 { grid-template-columns: repeat(4, minmax(100px, 1fr)); }
       label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.8rem; }
-      input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 0.91rem; color: var(--text); background: #fff; }
-      .results { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-bottom: 10px; }
-      .metric { border: 1px solid var(--line); border-radius: 10px; background: #f8fbfb; padding: 10px; }
-      .metric h4 { margin: 0; color: var(--muted); font-size: 0.82rem; }
-      .value { margin-top: 5px; font-size: 1.5rem; font-weight: 800; color: var(--ink); }
-      .ci { margin-top: 4px; font-size: 0.78rem; color: var(--muted); }
-      .summary-box { border: 1px solid var(--line); border-radius: 10px; background: #fbfefd; padding: 10px; min-height: 72px; }
-      .summary-title { font-size: 0.78rem; color: var(--muted); }
-      .summary-text { margin-top: 4px; font-weight: 620; font-size: 0.9rem; }
-      .side-card { margin-bottom: 10px; }
-      .log-item { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 8px; background: #fcfefd; }
-      .pill { border-radius: 999px; display: inline-block; padding: 3px 8px; font-size: 0.72rem; font-weight: 680; }
-      .pill.low { background: #d9f2e4; color: #1d5a3d; }
-      .pill.moderate { background: #f7efd0; color: #785608; }
-      .pill.high { background: #f8dedd; color: #8b2a21; }
-      .hist-card { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 8px; background: #fafdff; }
-      .hist-title { font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
-      .hist-bars { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; align-items: end; height: 72px; }
-      .hist-bar { background: #d2e8e4; border-radius: 2px 2px 0 0; min-height: 2px; }
-      .hist-bar.active { background: #0d766f; }
-      .analysis-item { margin-bottom: 8px; font-size: 0.88rem; }
-      .analysis-item b { color: #234742; }
-      @media (max-width: 980px) { .headline, .layout { grid-template-columns: 1fr; } }
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px;
+        font-size: 0.9rem;
+        color: var(--text);
+        background: #fff;
+      }
+      .muted-input { background: #f6f8f8; color: #576863; }
+      .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; }
+      button {
+        border: 0;
+        border-radius: 9px;
+        padding: 9px 12px;
+        font-weight: 700;
+        font-size: 0.86rem;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.62; cursor: not-allowed; }
+      .primary { background: var(--accent); color: #fff; }
+      .secondary { background: #dfe9e7; color: #24403d; }
+      .tertiary { background: transparent; color: #3c5e59; border: 1px solid #ccdcd8; }
+      .status {
+        border: 1px solid #cde0db;
+        border-radius: 10px;
+        background: #f3faf8;
+        color: #114f4b;
+        font-size: 0.84rem;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+      }
+      .err { color: #b42318; white-space: pre-wrap; margin-top: 6px; margin-bottom: 10px; }
+      .series-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 7px; }
+      .series-count { font-size: 0.8rem; color: #365f57; }
+      .spark {
+        margin-top: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 4px;
+      }
+      .spark svg { width: 100%; height: 62px; display: block; }
+      .spark path { fill: none; stroke: #0b6f69; stroke-width: 2; }
+
+      .result-pane { position: sticky; top: 12px; }
+      .result-hero {
+        border: 1px solid #c5dbd4;
+        border-radius: 12px;
+        background: linear-gradient(150deg, #ecf8f5, #f7fcfb);
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .result-hero h3 { margin: 0; font-size: 0.95rem; color: #2a4f49; }
+      .headline-outcome { margin-top: 5px; font-size: 1.24rem; font-weight: 800; }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+        gap: 7px;
+        margin-top: 8px;
+      }
+      .hero-item { border: 1px solid #d6e7e2; border-radius: 8px; padding: 7px; background: #fff; }
+      .hero-label { font-size: 0.76rem; color: var(--muted); }
+      .hero-value { margin-top: 2px; font-weight: 750; }
+      .uncertainty {
+        margin-top: 8px;
+        border: 1px solid #d4e0dd;
+        border-radius: 9px;
+        background: #f5faf9;
+        color: #214c45;
+        padding: 7px 8px;
+        font-size: 0.8rem;
+      }
+      .uncertainty.high {
+        border-color: #edd5a0;
+        background: #fff8e8;
+        color: #6f4d00;
+      }
+
+      .results { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px; }
+      .metric { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 10px; }
+      .metric h4 { margin: 0; font-size: 0.8rem; color: var(--muted); }
+      .metric .value { margin-top: 4px; font-size: 1.46rem; font-weight: 800; }
+      .unit { font-size: 0.75rem; color: var(--muted); margin-left: 3px; }
+      .ci { margin-top: 3px; font-size: 0.76rem; color: var(--muted); }
+      .ci-help {
+        display: inline-block;
+        margin-left: 6px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 1px solid #c2d2ce;
+        color: #4a645f;
+        text-align: center;
+        line-height: 14px;
+        font-size: 0.7rem;
+        cursor: help;
+        background: #f8fbfa;
+      }
+      .rangebar { margin-top: 5px; height: 5px; border-radius: 999px; background: #e7efed; position: relative; overflow: hidden; }
+      .rangebar span { position: absolute; left: 22%; width: 56%; top: 0; bottom: 0; background: #7db9ad; }
+      .badge { border-radius: 999px; display: inline-block; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; margin-top: 6px; }
+      .badge.low { background: var(--ok-bg); color: var(--ok); }
+      .badge.moderate { background: var(--warn-bg); color: var(--warn); }
+      .badge.high { background: var(--danger-bg); color: var(--danger); }
+
+      .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+      .tab-btn { background: #e8efed; color: #35524d; }
+      .tab-btn.active { background: var(--accent); color: #fff; }
+      .tab-content { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 8px; }
+      .hist-card { border: 1px solid #e2ebe8; border-radius: 9px; padding: 8px; margin-bottom: 8px; background: #fcffff; }
+      .hist-title { font-size: 0.82rem; color: var(--muted); margin-bottom: 2px; }
+      .hist-takeaway { font-size: 0.78rem; color: #33544e; margin-bottom: 6px; }
+      .hist-wrap { position: relative; }
+      .hist-bars { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; align-items: end; height: 64px; }
+      .hist-bar { background: #d5e9e5; border-radius: 2px 2px 0 0; min-height: 2px; }
+      .hist-bar.active { background: #0b6f69; }
+      .hist-marker {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #073f3b;
+        transform: translateX(-1px);
+      }
+      .legend { margin-top: 6px; font-size: 0.74rem; color: var(--muted); }
+      .metric-tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+      .metric-tab-btn { background: #edf3f1; color: #3a5953; padding: 7px 10px; border-radius: 8px; font-size: 0.78rem; }
+      .metric-tab-btn.active { background: #d2e8e2; color: #163f39; }
+      .inline-row { display: flex; gap: 8px; align-items: end; }
+
+      .analysis { border: 1px solid var(--line); border-radius: 10px; background: #f9fcfb; padding: 10px; }
+      .analysis-head { font-size: 0.88rem; color: var(--muted); }
+      .analysis-lead { margin-top: 4px; font-size: 0.95rem; font-weight: 700; }
+      .analysis-item { margin-top: 6px; font-size: 0.86rem; }
+      .analysis-item b { color: #284f49; }
+
+      details.advanced { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fcfffe; padding: 8px; }
+      details.advanced summary { cursor: pointer; font-weight: 700; color: #2a4a45; }
+      .advanced-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+      @media (max-width: 1120px) {
+        .top { grid-template-columns: 1fr; }
+        .main { grid-template-columns: 1fr; }
+        .result-pane { position: static; }
+      }
+      @media (max-width: 720px) {
+        .row-2, .row-3, .row-4, .results, .hero-grid { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <div class="headline">
+      <div class="top">
         <div class="hero">
           <h1>Viiraa Blood Glucose Analysis</h1>
-          <p class="sub">Enter meal, demographics, labs, and pre-meal glucose trace. The app computes features automatically and predicts <code>auc_120_abs</code>, <code>iauc_120</code>, and <code>peak_amplitude</code>.</p>
+          <p class="sub">Research-use prediction of post-meal glucose excursion.</p>
           <div class="chip-row">
-            <span class="chip">Single User Input Mode</span>
-            <span class="chip">Auto Feature Computation</span>
-            <span class="chip">Cohort + Personal Histograms</span>
+            <span class="chip">Step 1: Enter Meal + Glucose Data</span>
+            <span class="chip">Step 2: Review Prediction + Interpretation</span>
+            <span class="chip">CGMacros Typical Meal Comparison</span>
           </div>
+          <div class="research-banner">Research Use Only. Outputs are model predictions and not clinical diagnosis or treatment guidance.</div>
         </div>
-        <div class="hero-note">
-          <div class="small"><b>Research Use Only</b></div>
-          <div class="small" style="margin-top: 6px;">Outputs are model predictions and not clinical diagnosis or treatment guidance.</div>
-          <div class="small" id="requestMeta" style="margin-top: 10px;"></div>
-          <div class="small" id="fixedParams" style="margin-top: 8px;"></div>
-          <div class="small" style="margin-top: 8px;">Backend tools: <a href="/backend">/backend</a></div>
+        <div class="meta">
+          <div class="small"><b>Session</b></div>
+          <div class="small" style="margin-top: 6px;">Backend tools: <a href="/backend">/backend</a> | API docs: <a href="/docs">/docs</a></div>
+          <div class="small" style="margin-top: 8px;">Technical metadata is available in Step 2 under <b>Technical Details</b>.</div>
         </div>
       </div>
 
-      <div class="layout">
-        <div class="card">
-          <div class="section" style="margin-bottom: 8px;">
-            <h3>User Session</h3>
-            <div class="fields">
-              <div>
-                <label for="userId">user_id (for personal meal comparisons)</label>
-                <input id="userId" type="text" value="anonymous" />
-              </div>
-            </div>
-          </div>
+      <div class="main">
+        <div class="panel">
+          <h2 class="stage-title">Step 1: Enter Meal and Glucose Data</h2>
+          <p class="stage-note">Provide meal context, demographics, labs, and pre-meal glucose trace. The app computes engineered features automatically.</p>
 
           <div class="controls">
-            <button class="secondary" id="loadRawExampleBtn">Load Example</button>
-            <button class="secondary" id="clearBtn">Clear</button>
             <button class="primary" id="predictBtn">Run Prediction</button>
-            <button class="secondary" id="copyRequestBtn">Copy Request JSON</button>
-            <button class="secondary" id="downloadResultBtn">Download Result JSON</button>
+            <button class="secondary" id="loadRawExampleBtn">Load Example</button>
+            <button class="tertiary" id="clearBtn">Clear</button>
           </div>
 
           <div id="status" class="status">Ready.</div>
           <div id="error" class="err"></div>
 
           <div class="section">
-            <h3>Meal & Labs</h3>
-            <div class="fields">
+            <h3>Meal</h3>
+            <div class="fields row-2">
               <div>
                 <label for="mealType">meal_type *</label>
                 <select id="mealType">
@@ -125,6 +293,12 @@
                   <option>Snacks</option>
                 </select>
               </div>
+              <div>
+                <label for="minsSinceLast">minutes_since_last_meal *</label>
+                <input id="minsSinceLast" type="number" step="any" placeholder="180" />
+              </div>
+            </div>
+            <div class="fields row-4" style="margin-top: 8px;">
               <div>
                 <label for="mealCalories">meal_calories *</label>
                 <input id="mealCalories" type="number" step="any" placeholder="650" />
@@ -141,24 +315,12 @@
                 <label for="fatG">fat_g *</label>
                 <input id="fatG" type="number" step="any" placeholder="22" />
               </div>
-              <div>
-                <label for="minsSinceLast">minutes_since_last_meal *</label>
-                <input id="minsSinceLast" type="number" step="any" placeholder="180" />
-              </div>
-              <div>
-                <label for="a1cLab">A1c PDL (Lab) *</label>
-                <input id="a1cLab" type="number" step="any" placeholder="5.7" />
-              </div>
-              <div>
-                <label for="fastingLab">Fasting GLU - PDL (Lab) *</label>
-                <input id="fastingLab" type="number" step="any" placeholder="95" />
-              </div>
             </div>
           </div>
 
           <div class="section">
-            <h3>Demographics (Required)</h3>
-            <div class="fields">
+            <h3>Demographics</h3>
+            <div class="fields row-2">
               <div>
                 <label for="age">Age *</label>
                 <input id="age" type="number" step="any" placeholder="42" />
@@ -170,18 +332,31 @@
                   <option value="M">M</option>
                 </select>
               </div>
+            </div>
+            <div class="fields row-3" style="margin-top: 8px;">
               <div>
                 <label for="height">Height *</label>
-                <input id="height" type="number" step="any" placeholder="65" />
+                <div id="heightSingleWrap">
+                  <input id="height" type="number" step="any" placeholder="65" />
+                </div>
+                <div id="heightFeetInchesWrap" style="display:none;">
+                  <div class="inline-row">
+                    <div style="flex:1;">
+                      <label for="heightFeet" class="helper">feet</label>
+                      <input id="heightFeet" type="number" step="1" min="0" placeholder="5" />
+                    </div>
+                    <div style="flex:1;">
+                      <label for="heightInches" class="helper">inches</label>
+                      <input id="heightInches" type="number" step="any" min="0" max="11.99" placeholder="5" />
+                    </div>
+                  </div>
+                </div>
                 <select id="heightUnit" style="margin-top: 6px;">
                   <option value="in" selected>in</option>
                   <option value="cm">cm</option>
                   <option value="m">m</option>
+                  <option value="ft_in">ft + in</option>
                 </select>
-              </div>
-              <div>
-                <label for="bmi">BMI *</label>
-                <input id="bmi" type="number" step="any" placeholder="24.8" />
               </div>
               <div>
                 <label for="bodyWeight">Body weight *</label>
@@ -191,42 +366,112 @@
                   <option value="kg">kg</option>
                 </select>
               </div>
+              <div>
+                <label for="bmi">BMI (derived)</label>
+                <input id="bmi" class="muted-input" type="number" step="any" placeholder="auto" readonly />
+                <div class="helper" style="margin-top:4px;">Auto-calculated from height and weight.</div>
+              </div>
+            </div>
+            <div class="small" style="margin-top: 6px;">Height and weight are required. BMI is still passed into the model, but derived in UI for consistency.</div>
+          </div>
+
+          <div class="section">
+            <h3>Labs</h3>
+            <div class="fields row-2">
+              <div>
+                <label for="a1cLab">A1c PDL (Lab) *</label>
+                <input id="a1cLab" type="number" step="any" placeholder="5.7" />
+              </div>
+              <div>
+                <label for="fastingLab">Fasting GLU - PDL (Lab) *</label>
+                <input id="fastingLab" type="number" step="any" placeholder="95" />
+              </div>
+            </div>
+            <div class="fields row-2" style="margin-top: 8px;">
+              <div>
+                <label for="userId">user_id (for personal meal comparisons)</label>
+                <input id="userId" type="text" value="anonymous" />
+              </div>
             </div>
           </div>
 
           <div class="section">
             <h3>Pre-Meal Glucose Series</h3>
-            <label for="rawPreGlucose">pre_glucose_series (comma/newline separated) *</label>
+            <label for="rawPreGlucose">pre_glucose_series *</label>
             <textarea id="rawPreGlucose" rows="5" placeholder="92, 93, 94, 95, 97, 99"></textarea>
-            <div class="small" style="margin-top: 6px;">Fixed backend params for feature derivation are shown in the top-right panel.</div>
-          </div>
-        </div>
-
-        <div>
-          <div class="card side-card">
-            <h3 style="margin-top: 0; margin-bottom: 8px;">Prediction Output</h3>
-            <div id="results" class="results"></div>
-            <div id="analysisSummary" class="summary-box">
-              <div class="summary-title">Excursion Summary</div>
-              <div class="summary-text">Run a prediction to view summary.</div>
+            <div class="small" style="margin-top: 6px;">Accepted format: comma/newline separated values. Example: <code>92, 93, 94</code>.</div>
+            <div class="series-toolbar">
+              <span class="series-count" id="seriesCount">0 points detected</span>
+              <input id="seriesFile" type="file" accept=".csv,.txt" />
+              <button class="tertiary" id="useSampleNearSeriesBtn" type="button">Use Sample Data</button>
+            </div>
+            <div class="spark">
+              <svg viewBox="0 0 400 62" preserveAspectRatio="none">
+                <path id="seriesSparkPath" d=""></path>
+              </svg>
             </div>
           </div>
 
-          <div class="card side-card">
-            <h3 style="margin-top: 0; margin-bottom: 8px;">Histogram vs Typical Meal Type</h3>
-            <div id="histViz"></div>
+          <details class="advanced">
+            <summary>Advanced Actions</summary>
+            <div class="advanced-row">
+              <button class="tertiary" id="copyRequestBtn" type="button">Copy Request JSON</button>
+              <button class="tertiary" id="downloadResultBtn" type="button">Download Result JSON</button>
+            </div>
+          </details>
+        </div>
+
+        <div class="panel result-pane">
+          <h2 class="stage-title">Step 2: Review Prediction and Interpretation</h2>
+          <p class="stage-note">After prediction runs, this panel updates immediately with excursion severity, key metrics, cohort comparison, and personal history context.</p>
+
+          <div id="resultHero" class="result-hero">
+            <h3>Prediction Summary</h3>
+            <div class="headline-outcome" id="resultHeadline">Predicted Excursion: Pending</div>
+            <div class="hero-grid">
+              <div class="hero-item"><div class="hero-label">Peak glucose</div><div class="hero-value" id="heroPeak">-</div></div>
+              <div class="hero-item"><div class="hero-label">Peak increment</div><div class="hero-value" id="heroIncrement">-</div></div>
+              <div class="hero-item"><div class="hero-label">Confidence band (95%)</div><div class="hero-value" id="heroBand">-</div></div>
+              <div class="hero-item"><div class="hero-label">Interpretation</div><div class="hero-value" id="heroInterpret">-</div></div>
+            </div>
+            <div class="uncertainty" id="uncertaintyBanner">Uncertainty summary will appear after prediction.</div>
           </div>
 
-          <div class="card side-card">
-            <h3 style="margin-top: 0; margin-bottom: 8px;">Histogram vs Your Meal History</h3>
+          <div id="results" class="results"></div>
+
+          <div class="tabs">
+            <button class="tab-btn active" id="tabTypicalBtn" type="button">Typical Meal Type</button>
+            <button class="tab-btn" id="tabPersonalBtn" type="button">Your Meal History</button>
+          </div>
+          <div class="tab-content" id="tabTypicalPane">
+            <div class="metric-tabs">
+              <button class="metric-tab-btn active" id="typicalMetricPeakBtn" type="button">Peak Increment</button>
+              <button class="metric-tab-btn" id="typicalMetricAucBtn" type="button">AUC 120</button>
+              <button class="metric-tab-btn" id="typicalMetricIAucBtn" type="button">iAUC 120</button>
+            </div>
+            <div id="histViz"></div>
+          </div>
+          <div class="tab-content" id="tabPersonalPane" style="display:none;">
+            <div class="metric-tabs">
+              <button class="metric-tab-btn active" id="personalMetricPeakBtn" type="button">Peak Increment</button>
+              <button class="metric-tab-btn" id="personalMetricAucBtn" type="button">AUC 120</button>
+              <button class="metric-tab-btn" id="personalMetricIAucBtn" type="button">iAUC 120</button>
+            </div>
             <div id="personalHistViz"></div>
           </div>
 
-          <div class="card side-card">
-            <h3 style="margin-top: 0; margin-bottom: 8px;">Verbal Analysis</h3>
+          <div class="analysis" style="margin-top: 10px;">
+            <div class="analysis-head">Interpretation</div>
+            <div class="analysis-lead" id="analysisLead">Run a prediction to view interpretation.</div>
             <div id="analysisText"></div>
           </div>
 
+          <details class="advanced" style="margin-top:10px;">
+            <summary>Technical Details</summary>
+            <div class="small" id="requestMeta" style="margin-top: 8px;"></div>
+            <div class="small" id="fixedParams" style="margin-top: 8px;"></div>
+            <div class="small" id="ciMethodMeta" style="margin-top: 8px;"></div>
+          </details>
         </div>
       </div>
     </div>
@@ -235,16 +480,21 @@
       const errorEl = document.getElementById("error");
       const statusEl = document.getElementById("status");
       const resultsEl = document.getElementById("results");
-      const rawPayloadEl = document.getElementById("rawPayload");
       const requestMetaEl = document.getElementById("requestMeta");
       const fixedParamsEl = document.getElementById("fixedParams");
-      const recentLogsEl = document.getElementById("recentLogs");
-      const analysisSummaryEl = document.getElementById("analysisSummary");
       const histVizEl = document.getElementById("histViz");
       const personalHistVizEl = document.getElementById("personalHistViz");
       const analysisTextEl = document.getElementById("analysisText");
-      const userIdEl = document.getElementById("userId");
+      const analysisLeadEl = document.getElementById("analysisLead");
 
+      const resultHeadlineEl = document.getElementById("resultHeadline");
+      const heroPeakEl = document.getElementById("heroPeak");
+      const heroIncrementEl = document.getElementById("heroIncrement");
+      const heroBandEl = document.getElementById("heroBand");
+      const heroInterpretEl = document.getElementById("heroInterpret");
+      const uncertaintyBannerEl = document.getElementById("uncertaintyBanner");
+
+      const userIdEl = document.getElementById("userId");
       const mealTypeEl = document.getElementById("mealType");
       const mealCaloriesEl = document.getElementById("mealCalories");
       const carbsGEl = document.getElementById("carbsG");
@@ -253,19 +503,40 @@
       const minsSinceLastEl = document.getElementById("minsSinceLast");
       const a1cLabEl = document.getElementById("a1cLab");
       const fastingLabEl = document.getElementById("fastingLab");
-
       const ageEl = document.getElementById("age");
       const genderEl = document.getElementById("gender");
       const heightEl = document.getElementById("height");
+      const heightFeetEl = document.getElementById("heightFeet");
+      const heightInchesEl = document.getElementById("heightInches");
+      const heightSingleWrapEl = document.getElementById("heightSingleWrap");
+      const heightFeetInchesWrapEl = document.getElementById("heightFeetInchesWrap");
       const heightUnitEl = document.getElementById("heightUnit");
       const bmiEl = document.getElementById("bmi");
       const bodyWeightEl = document.getElementById("bodyWeight");
       const bodyWeightUnitEl = document.getElementById("bodyWeightUnit");
       const rawPreGlucoseEl = document.getElementById("rawPreGlucose");
+      const seriesCountEl = document.getElementById("seriesCount");
+      const seriesFileEl = document.getElementById("seriesFile");
+      const seriesSparkPathEl = document.getElementById("seriesSparkPath");
+
+      const tabTypicalBtn = document.getElementById("tabTypicalBtn");
+      const tabPersonalBtn = document.getElementById("tabPersonalBtn");
+      const tabTypicalPane = document.getElementById("tabTypicalPane");
+      const tabPersonalPane = document.getElementById("tabPersonalPane");
+      const ciMethodMetaEl = document.getElementById("ciMethodMeta");
+
+      const typicalMetricPeakBtn = document.getElementById("typicalMetricPeakBtn");
+      const typicalMetricAucBtn = document.getElementById("typicalMetricAucBtn");
+      const typicalMetricIAucBtn = document.getElementById("typicalMetricIAucBtn");
+      const personalMetricPeakBtn = document.getElementById("personalMetricPeakBtn");
+      const personalMetricAucBtn = document.getElementById("personalMetricAucBtn");
+      const personalMetricIAucBtn = document.getElementById("personalMetricIAucBtn");
 
       let lastRequestPayload = null;
       let lastResponsePayload = null;
       let pendingCount = 0;
+      let selectedTypicalMetric = "peak_amplitude";
+      let selectedPersonalMetric = "peak_amplitude";
 
       function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -277,54 +548,54 @@
         for (const b of buttons) b.disabled = busy;
       }
 
-      function clearOutput() {
-        errorEl.textContent = "";
-        resultsEl.innerHTML = "";
-        requestMetaEl.textContent = "";
-        histVizEl.innerHTML = "";
-        personalHistVizEl.innerHTML = "";
-        analysisSummaryEl.innerHTML = '<div class="summary-title">Excursion Summary</div><div class="summary-text">Run a prediction to view summary.</div>';
-        analysisTextEl.innerHTML = "";
-        if (rawPayloadEl) rawPayloadEl.value = "";
-        lastResponsePayload = null;
-      }
-
-      function clearInputs() {
-        mealTypeEl.value = "Lunch";
-        mealCaloriesEl.value = "";
-        carbsGEl.value = "";
-        proteinGEl.value = "";
-        fatGEl.value = "";
-        minsSinceLastEl.value = "";
-        a1cLabEl.value = "";
-        fastingLabEl.value = "";
-        ageEl.value = "";
-        genderEl.value = "F";
-        heightEl.value = "";
-        heightUnitEl.value = "in";
-        bmiEl.value = "";
-        bodyWeightEl.value = "";
-        bodyWeightUnitEl.value = "lb";
-        rawPreGlucoseEl.value = "";
-      }
-
-      function normalizeHeightToInches(heightValue, unit) {
+      function normalizeHeightToInches(v, unit) {
         const u = String(unit || "in").toLowerCase();
-        if (u === "cm") return heightValue / 2.54;
-        if (u === "m") return heightValue * 39.37007874015748;
-        return heightValue;
+        if (u === "cm") return v / 2.54;
+        if (u === "m") return v * 39.37007874015748;
+        if (u === "ft_in") {
+          const ft = Number(heightFeetEl.value);
+          const inc = Number(heightInchesEl.value);
+          const ftSafe = Number.isFinite(ft) ? ft : 0;
+          const inSafe = Number.isFinite(inc) ? inc : 0;
+          return ftSafe * 12 + inSafe;
+        }
+        return v;
       }
 
-      function normalizeWeightToPounds(weightValue, unit) {
+      function normalizeWeightToPounds(v, unit) {
         const u = String(unit || "lb").toLowerCase();
-        if (u === "kg") return weightValue * 2.2046226218487757;
-        return weightValue;
+        if (u === "kg") return v * 2.2046226218487757;
+        return v;
       }
 
       function parseSeries() {
         const txt = String(rawPreGlucoseEl.value || "").trim();
         if (!txt) return [];
-        return txt.split(/[\n,]+/).map((x) => x.trim()).filter((x) => x.length > 0).map((x) => Number(x));
+        return txt
+          .split(/[\n,]+/)
+          .map((x) => x.trim())
+          .filter((x) => x.length > 0)
+          .map((x) => Number(x));
+      }
+
+      function updateSeriesPreview() {
+        const vals = parseSeries().filter((v) => Number.isFinite(v));
+        seriesCountEl.textContent = `${vals.length} points detected`;
+        if (!vals.length) {
+          seriesSparkPathEl.setAttribute("d", "");
+          return;
+        }
+        const w = 400;
+        const h = 62;
+        const minV = Math.min(...vals);
+        const maxV = Math.max(...vals);
+        const span = Math.max(1e-9, maxV - minV);
+        const pts = vals.map((v, i) => {
+          const x = vals.length === 1 ? 0 : (i / (vals.length - 1)) * w;
+          const y = h - ((v - minV) / span) * (h - 4) - 2;
+          return `${x.toFixed(2)},${y.toFixed(2)}`;
+        });
+        seriesSparkPathEl.setAttribute("d", `M ${pts.join(" L ")}`);
       }
 
       function getRequiredNumber(el, label) {
@@ -333,30 +604,64 @@
         return v;
       }
 
+      function getHeightInchesRequired() {
+        const unit = String(heightUnitEl.value || "in");
+        if (unit === "ft_in") {
+          const ft = Number(heightFeetEl.value);
+          const inc = Number(heightInchesEl.value);
+          if (!Number.isFinite(ft) || ft <= 0) throw new Error("Height feet must be > 0.");
+          if (!Number.isFinite(inc) || inc < 0 || inc >= 12) throw new Error("Height inches must be >= 0 and < 12.");
+          return ft * 12 + inc;
+        }
+        return normalizeHeightToInches(getRequiredNumber(heightEl, "Height"), unit);
+      }
+
+      function recomputeBmi() {
+        const unit = String(heightUnitEl.value || "in");
+        let inches = NaN;
+        if (unit === "ft_in") {
+          const ft = Number(heightFeetEl.value);
+          const inc = Number(heightInchesEl.value);
+          if (Number.isFinite(ft) && ft > 0 && Number.isFinite(inc) && inc >= 0 && inc < 12) inches = ft * 12 + inc;
+        } else {
+          const hv = Number(heightEl.value);
+          if (Number.isFinite(hv) && hv > 0) inches = normalizeHeightToInches(hv, unit);
+        }
+        const wtRaw = Number(bodyWeightEl.value);
+        const wtLb = Number.isFinite(wtRaw) && wtRaw > 0 ? normalizeWeightToPounds(wtRaw, bodyWeightUnitEl.value) : NaN;
+        if (Number.isFinite(inches) && inches > 0 && Number.isFinite(wtLb) && wtLb > 0) {
+          bmiEl.value = (703.0 * wtLb / (inches * inches)).toFixed(2);
+        } else {
+          bmiEl.value = "";
+        }
+      }
+
+      function syncHeightEntryMode() {
+        const useFeetInches = String(heightUnitEl.value || "in") === "ft_in";
+        heightSingleWrapEl.style.display = useFeetInches ? "none" : "block";
+        heightFeetInchesWrapEl.style.display = useFeetInches ? "block" : "none";
+        recomputeBmi();
+      }
+
       function collectPayloadRawMode() {
         const series = parseSeries();
         if (series.length < 4) throw new Error("pre_glucose_series must have at least 4 values.");
         if (series.some((v) => !Number.isFinite(v))) throw new Error("pre_glucose_series must be numeric.");
 
-        const heightRaw = getRequiredNumber(heightEl, "Height");
-        const weightRaw = getRequiredNumber(bodyWeightEl, "Body weight");
-        const heightInches = normalizeHeightToInches(heightRaw, heightUnitEl.value);
-        const weightPounds = normalizeWeightToPounds(weightRaw, bodyWeightUnitEl.value);
-
         const mealInfo = {
-          "meal_type": String(mealTypeEl.value || "Lunch"),
-          "meal_calories": getRequiredNumber(mealCaloriesEl, "meal_calories"),
-          "carbs_g": getRequiredNumber(carbsGEl, "carbs_g"),
-          "protein_g": getRequiredNumber(proteinGEl, "protein_g"),
-          "fat_g": getRequiredNumber(fatGEl, "fat_g"),
-          "minutes_since_last_meal": getRequiredNumber(minsSinceLastEl, "minutes_since_last_meal"),
+          meal_type: String(mealTypeEl.value || "Lunch"),
+          meal_calories: getRequiredNumber(mealCaloriesEl, "meal_calories"),
+          carbs_g: getRequiredNumber(carbsGEl, "carbs_g"),
+          protein_g: getRequiredNumber(proteinGEl, "protein_g"),
+          fat_g: getRequiredNumber(fatGEl, "fat_g"),
+          minutes_since_last_meal: getRequiredNumber(minsSinceLastEl, "minutes_since_last_meal"),
           "A1c PDL (Lab)": getRequiredNumber(a1cLabEl, "A1c PDL (Lab)"),
           "Fasting GLU - PDL (Lab)": getRequiredNumber(fastingLabEl, "Fasting GLU - PDL (Lab)"),
-          "Age": getRequiredNumber(ageEl, "Age"),
-          "Gender": String(genderEl.value || "").trim() || "F",
-          "Height": heightInches,
-          "BMI": getRequiredNumber(bmiEl, "BMI"),
-          "Body weight": weightPounds,
+          Age: getRequiredNumber(ageEl, "Age"),
+          Gender: String(genderEl.value || "").trim() || "F",
+          Height: getHeightInchesRequired(),
+          BMI: getRequiredNumber(bmiEl, "BMI"),
+          "Body weight": normalizeWeightToPounds(getRequiredNumber(bodyWeightEl, "Body weight"), bodyWeightUnitEl.value),
         };
 
         return {
@@ -375,93 +680,240 @@
         return "low";
       }
 
+      function labelFromBand(band) {
+        if (band === "high") return "High";
+        if (band === "moderate") return "Moderate";
+        return "Lower";
+      }
+
+      function setResultHero(data) {
+        const preds = data.predictions || {};
+        const intervals = data.prediction_intervals || {};
+        const peakAbs = Number(preds.peak_glucose_abs || 0);
+        const inc = Number(preds.peak_amplitude || 0);
+        const peakCI = (intervals.peak_glucose_abs || {}).ci_95 || [peakAbs, peakAbs];
+        const band = riskBandFromPeakAbs(peakAbs);
+        const sev = labelFromBand(band);
+
+        resultHeadlineEl.textContent = `Predicted Excursion: ${sev}`;
+        heroPeakEl.textContent = `${peakAbs.toFixed(1)} mg/dL`;
+        heroIncrementEl.textContent = `${inc >= 0 ? "+" : ""}${inc.toFixed(1)} mg/dL`;
+        heroBandEl.textContent = `${Number(peakCI[0]).toFixed(1)} - ${Number(peakCI[1]).toFixed(1)} mg/dL`;
+        heroInterpretEl.textContent = sev;
+      }
+
+      function renderMetricCard({ key, label, value, unit, ci95, band }) {
+        const card = document.createElement("div");
+        card.className = "metric";
+        card.innerHTML = `
+          <h4>${label}</h4>
+          <div class="value">${value.toFixed(2)}<span class="unit">${unit}</span></div>
+          <div class="ci">95% CI: ${Number(ci95[0]).toFixed(2)} - ${Number(ci95[1]).toFixed(2)} <span class="ci-help" title="95% CI means the model-estimated interval where the true value is expected to fall for similar cases. Wider intervals indicate greater uncertainty.">?</span></div>
+          <div class="rangebar"><span></span></div>
+          <span class="badge ${band}">${labelFromBand(band)}</span>
+        `;
+        resultsEl.appendChild(card);
+      }
+
+      function summarizeUncertainty(data) {
+        const preds = data.predictions || {};
+        const intervals = data.prediction_intervals || {};
+        const keys = ["peak_glucose_abs", "auc_120_abs", "iauc_120"];
+        const ratios = [];
+        for (const key of keys) {
+          const ci = ((intervals[key] || {}).ci_95) || null;
+          const pv = Number(preds[key] || 0);
+          if (!ci || !Array.isArray(ci) || ci.length < 2) continue;
+          const width = Math.max(0, Number(ci[1]) - Number(ci[0]));
+          const denom = Math.max(Math.abs(pv), 1);
+          ratios.push(width / denom);
+        }
+        if (!ratios.length) {
+          uncertaintyBannerEl.className = "uncertainty";
+          uncertaintyBannerEl.textContent = "Uncertainty summary unavailable for this prediction.";
+          return;
+        }
+        const avgRatio = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+        const ciMethod = (((data.ci_metadata || {}).method) || "unknown");
+        if (avgRatio >= 1.0) {
+          uncertaintyBannerEl.className = "uncertainty high";
+          uncertaintyBannerEl.textContent = `Higher uncertainty than average: confidence intervals are wide relative to predicted values (${ciMethod}). Interpret as directional, not exact.`;
+          return;
+        }
+        uncertaintyBannerEl.className = "uncertainty";
+        uncertaintyBannerEl.textContent = `Uncertainty is moderate: confidence intervals are informative but still reflect model spread (${ciMethod}).`;
+      }
+
       function renderPredictions(data) {
         const preds = data.predictions || {};
         const intervals = data.prediction_intervals || {};
         resultsEl.innerHTML = "";
-        const order = ["peak_glucose_abs", "auc_120_abs", "iauc_120"];
-        for (const key of order) {
-          const card = document.createElement("div");
-          card.className = "metric";
-          const v = Number(preds[key]);
-          const ci95 = (intervals[key] || {}).ci_95 || [v, v];
-          const band = key === "peak_glucose_abs" ? riskBandFromPeakAbs(v) : (v > 0 ? "moderate" : "low");
-          let extra = "";
-          if (key === "peak_glucose_abs" && Number.isFinite(Number(preds.peak_amplitude))) {
-            extra = `<div class="ci">Peak increment: ${Number(preds.peak_amplitude).toFixed(2)}</div>`;
-          }
-          card.innerHTML = `<h4>${key}</h4><div class="value">${v.toFixed(2)}</div><div class="ci">95% CI: ${Number(ci95[0]).toFixed(2)} - ${Number(ci95[1]).toFixed(2)}</div>${extra}<span class="pill ${band}">${band.toUpperCase()}</span>`;
-          resultsEl.appendChild(card);
-        }
+
+        const peakAbs = Number(preds.peak_glucose_abs || 0);
+        const band = riskBandFromPeakAbs(peakAbs);
+
+        renderMetricCard({
+          key: "peak_glucose_abs",
+          label: "Peak Glucose",
+          value: peakAbs,
+          unit: "mg/dL",
+          ci95: (intervals.peak_glucose_abs || {}).ci_95 || [peakAbs, peakAbs],
+          band,
+        });
+        const auc = Number(preds.auc_120_abs || 0);
+        renderMetricCard({
+          key: "auc_120_abs",
+          label: "AUC 120",
+          value: auc,
+          unit: "mg*min/dL",
+          ci95: (intervals.auc_120_abs || {}).ci_95 || [auc, auc],
+          band: auc > 0 ? "moderate" : "low",
+        });
+        const iauc = Number(preds.iauc_120 || 0);
+        renderMetricCard({
+          key: "iauc_120",
+          label: "iAUC 120",
+          value: iauc,
+          unit: "mg*min/dL",
+          ci95: (intervals.iauc_120 || {}).ci_95 || [iauc, iauc],
+          band: iauc > 0 ? "moderate" : "low",
+        });
       }
 
-      function renderHistogram(data) {
-        histVizEl.innerHTML = "";
-        const cohort = data.cohort_comparison || {};
-        const metrics = cohort.metrics || {};
-        for (const key of ["auc_120_abs", "iauc_120", "peak_amplitude"]) {
-          const m = metrics[key];
-          if (!m) continue;
-          if (m.available === false) {
-            const card = document.createElement("div");
-            card.className = "hist-card";
-            card.innerHTML = `<div class="hist-title"><b>${key}</b></div><div class="small">${m.reason || "No CGMacros reference available for this meal type."}</div>`;
-            histVizEl.appendChild(card);
-            continue;
-          }
-          const counts = m.bin_counts || [];
-          const hi = Number(m.highlight_bin ?? 0);
-          const maxCount = Math.max(1, ...counts.map((x) => Number(x || 0)));
-          const card = document.createElement("div");
-          card.className = "hist-card";
-          const barsHtml = counts.map((c, i) => {
-            const h = Math.max(2, Math.round((Number(c || 0) / maxCount) * 70));
+      function percentileTakeaway(p) {
+        const pct = Number(p || 0);
+        if (pct >= 75) return "Higher than most comparable meals.";
+        if (pct <= 25) return "Lower than most comparable meals.";
+        return "Near the middle of comparable meals.";
+      }
+
+      function histogramCard(metricLabel, m, legendText) {
+        const card = document.createElement("div");
+        card.className = "hist-card";
+        if (m.available === false) {
+          card.innerHTML = `<div class="hist-title"><b>${metricLabel}</b></div><div class="hist-takeaway">${m.reason || "No CGMacros reference available for this meal type."}</div>`;
+          return card;
+        }
+        const counts = m.bin_counts || [];
+        const hi = Number(m.highlight_bin ?? 0);
+        const maxCount = Math.max(1, ...counts.map((x) => Number(x || 0)));
+        const markerPct = counts.length > 0 ? ((Math.min(Math.max(hi, 0), counts.length - 1) + 0.5) / counts.length) * 100 : 0;
+        const barsHtml = counts
+          .map((c, i) => {
+            const h = Math.max(2, Math.round((Number(c || 0) / maxCount) * 62));
             const klass = i === hi ? "hist-bar active" : "hist-bar";
             return `<div class="${klass}" style="height:${h}px"></div>`;
-          }).join("");
-          card.innerHTML = `<div class="hist-title"><b>${key}</b> percentile: ${Number(m.percentile || 0).toFixed(1)}</div><div class="hist-bars">${barsHtml}</div>`;
-          histVizEl.appendChild(card);
-        }
+          })
+          .join("");
+        card.innerHTML = `
+          <div class="hist-title"><b>${metricLabel}</b> percentile: ${Number(m.percentile || 0).toFixed(1)}</div>
+          <div class="hist-takeaway">${percentileTakeaway(m.percentile)}</div>
+          <div class="hist-wrap">
+            <div class="hist-bars">${barsHtml}</div>
+            <div class="hist-marker" style="left:${markerPct.toFixed(2)}%"></div>
+          </div>
+          <div class="legend">${legendText}</div>
+        `;
+        return card;
       }
 
-      function renderPersonalHistogram(data) {
+      function renderHistogramTabs(data) {
+        histVizEl.innerHTML = "";
         personalHistVizEl.innerHTML = "";
-        const personal = data.personal_comparison || {};
-        const metrics = personal.metrics || {};
-        for (const key of ["auc_120_abs", "iauc_120", "peak_amplitude"]) {
-          const m = metrics[key] || {};
-          const hmeta = m.histogram;
-          if (!hmeta) {
-            const div = document.createElement("div");
-            div.className = "small";
-            div.textContent = `No sufficient ${key} history yet (need at least 3 same-meal records).`;
-            personalHistVizEl.appendChild(div);
-            continue;
-          }
-          const counts = hmeta.bin_counts || [];
-          const hi = Number(hmeta.highlight_bin ?? 0);
-          const maxCount = Math.max(1, ...counts.map((x) => Number(x || 0)));
+
+        const cmetrics = (data.cohort_comparison || {}).metrics || {};
+        const cMap = {
+          peak_amplitude: ["Peak Increment", cmetrics.peak_amplitude || { available: false }],
+          auc_120_abs: ["AUC 120", cmetrics.auc_120_abs || { available: false }],
+          iauc_120: ["iAUC 120", cmetrics.iauc_120 || { available: false }],
+        };
+        const cSel = cMap[selectedTypicalMetric] || cMap.peak_amplitude;
+        histVizEl.appendChild(
+          histogramCard(
+            cSel[0],
+            cSel[1],
+            "Legend: light bars = CGMacros same-meal-type distribution, dark bar + marker = your predicted value."
+          )
+        );
+
+        const pmetrics = (data.personal_comparison || {}).metrics || {};
+        const pKey = selectedPersonalMetric;
+        const pName = pKey === "peak_amplitude" ? "Peak Increment" : pKey === "auc_120_abs" ? "AUC 120" : "iAUC 120";
+        const pm = pmetrics[pKey] || {};
+        const ph = pm.histogram;
+        if (!ph) {
           const card = document.createElement("div");
           card.className = "hist-card";
-          const barsHtml = counts.map((c, i) => {
-            const hh = Math.max(2, Math.round((Number(c || 0) / maxCount) * 70));
-            const klass = i === hi ? "hist-bar active" : "hist-bar";
-            return `<div class="${klass}" style="height:${hh}px"></div>`;
-          }).join("");
-          card.innerHTML = `<div class="hist-title"><b>${key}</b> personal percentile: ${Number(m.percentile || 0).toFixed(1)}</div><div class="hist-bars">${barsHtml}</div>`;
+          card.innerHTML = `<div class="hist-title"><b>${pName}</b></div><div class="hist-takeaway">No sufficient same-meal history yet (need at least 3 records).</div>`;
           personalHistVizEl.appendChild(card);
+          return;
         }
+        const personalShape = {
+          available: true,
+          percentile: Number(pm.percentile || 0),
+          bin_counts: ph.bin_counts || [],
+          highlight_bin: ph.highlight_bin,
+        };
+        personalHistVizEl.appendChild(
+          histogramCard(
+            pName,
+            personalShape,
+            "Legend: light bars = your same-meal history, dark bar + marker = current predicted value."
+          )
+        );
       }
 
       function renderAnalysisText(data) {
         const text = data.analysis_text || {};
-        analysisSummaryEl.innerHTML = `<div class="summary-title">Excursion Summary</div><div class="summary-text">${text.headline || "No summary available."}</div>`;
+        analysisLeadEl.textContent = text.headline || "No summary available.";
         analysisTextEl.innerHTML = `
-          <div class="analysis-item"><b>Short-term impact:</b> ${text.short_term_impact || ""}</div>
+          <div class="analysis-item"><b>What stands out:</b> ${text.short_term_impact || ""}</div>
           <div class="analysis-item"><b>Typical meal comparison:</b> ${text.cohort_comparison || ""}</div>
           <div class="analysis-item"><b>Your meal history:</b> ${text.personal_comparison || ""}</div>
           <div class="analysis-item small"><b>Safety:</b> ${text.safety_note || ""}</div>
         `;
+      }
+
+      function clearOutput() {
+        errorEl.textContent = "";
+        resultsEl.innerHTML = "";
+        requestMetaEl.textContent = "";
+        histVizEl.innerHTML = "";
+        personalHistVizEl.innerHTML = "";
+        resultHeadlineEl.textContent = "Predicted Excursion: Pending";
+        heroPeakEl.textContent = "-";
+        heroIncrementEl.textContent = "-";
+        heroBandEl.textContent = "-";
+        heroInterpretEl.textContent = "-";
+        uncertaintyBannerEl.className = "uncertainty";
+        uncertaintyBannerEl.textContent = "Uncertainty summary will appear after prediction.";
+        analysisLeadEl.textContent = "Run a prediction to view interpretation.";
+        analysisTextEl.innerHTML = "";
+        ciMethodMetaEl.textContent = "";
+        lastResponsePayload = null;
+      }
+
+      function clearInputs() {
+        mealTypeEl.value = "Lunch";
+        mealCaloriesEl.value = "";
+        carbsGEl.value = "";
+        proteinGEl.value = "";
+        fatGEl.value = "";
+        minsSinceLastEl.value = "";
+        a1cLabEl.value = "";
+        fastingLabEl.value = "";
+        ageEl.value = "";
+        genderEl.value = "F";
+        heightEl.value = "";
+        heightFeetEl.value = "";
+        heightInchesEl.value = "";
+        heightUnitEl.value = "in";
+        bmiEl.value = "";
+        bodyWeightEl.value = "";
+        bodyWeightUnitEl.value = "lb";
+        rawPreGlucoseEl.value = "";
+        syncHeightEntryMode();
+        updateSeriesPreview();
       }
 
       async function loadUiConfig() {
@@ -473,55 +925,6 @@
           fixedParamsEl.textContent = `Fixed raw params: step_minutes=${fixed.step_minutes ?? "n/a"}, baseline_window_minutes=${fixed.baseline_window_minutes ?? "n/a"}`;
         } catch {
           fixedParamsEl.textContent = "UI config unavailable; using local defaults.";
-        }
-      }
-
-      async function runPrediction() {
-        clearOutput();
-        let payload;
-        try {
-          payload = collectPayloadRawMode();
-        } catch (err) {
-          errorEl.textContent = err.message || String(err);
-          return;
-        }
-
-        setStatus("Running prediction...");
-        setLoading(true);
-        lastRequestPayload = payload;
-        if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(payload, null, 2);
-
-        try {
-          const r = await fetch("/v1/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const data = await r.json();
-          if (!r.ok) {
-            errorEl.textContent = data.detail || "Prediction failed.";
-            if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(data, null, 2);
-            setStatus("Prediction failed.");
-            return;
-          }
-          renderPredictions(data);
-          renderHistogram(data);
-          renderPersonalHistogram(data);
-          renderAnalysisText(data);
-          requestMetaEl.textContent = `request_id: ${data.request_id}`;
-          if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(data, null, 2);
-          lastResponsePayload = data;
-          try {
-            localStorage.setItem("viiraa_last_request_payload", JSON.stringify(payload, null, 2));
-            localStorage.setItem("viiraa_last_response_payload", JSON.stringify(data, null, 2));
-          } catch {}
-          setStatus("Prediction completed.");
-          await loadRecentLogs();
-        } catch (err) {
-          errorEl.textContent = String(err);
-          setStatus("Prediction failed.");
-        } finally {
-          setLoading(false);
         }
       }
 
@@ -551,10 +954,14 @@
           genderEl.value = m.Gender ?? "F";
           heightEl.value = m.Height ?? "";
           heightUnitEl.value = "in";
-          bmiEl.value = m.BMI ?? "";
+          heightFeetEl.value = "";
+          heightInchesEl.value = "";
           bodyWeightEl.value = m["Body weight"] ?? "";
           bodyWeightUnitEl.value = "lb";
+          syncHeightEntryMode();
+          recomputeBmi();
           rawPreGlucoseEl.value = (one.pre_glucose_series || []).join(", ");
+          updateSeriesPreview();
           setStatus("Loaded example.");
         } catch (err) {
           errorEl.textContent = String(err);
@@ -564,29 +971,52 @@
         }
       }
 
-      async function loadRecentLogs() {
-        if (!recentLogsEl) return;
-        recentLogsEl.innerHTML = "";
+      async function runPrediction() {
+        clearOutput();
+        let payload;
         try {
-          const r = await fetch("/v1/logs/recent?limit=8");
+          payload = collectPayloadRawMode();
+        } catch (err) {
+          errorEl.textContent = err.message || String(err);
+          return;
+        }
+
+        setStatus("Running prediction...");
+        setLoading(true);
+        lastRequestPayload = payload;
+
+        try {
+          const r = await fetch("/v1/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
           const data = await r.json();
-          const items = data.items || [];
-          if (!items.length) {
-            recentLogsEl.innerHTML = '<div class="small">No logs yet.</div>';
+          if (!r.ok) {
+            errorEl.textContent = data.detail || "Prediction failed.";
+            setStatus("Prediction failed.");
             return;
           }
-          for (const item of items) {
-            const div = document.createElement("div");
-            div.className = "log-item";
-            const status = item.status || "unknown";
-            const ts = item.ts_utc || "";
-            const req = item.request_id || "";
-            const lat = item.latency_ms !== undefined ? `${item.latency_ms} ms` : "";
-            div.innerHTML = `<div class="small"><b>${status}</b> ${ts}</div><div class="small">${req}</div><div class="small">${lat}</div>`;
-            recentLogsEl.appendChild(div);
-          }
-        } catch {
-          recentLogsEl.innerHTML = '<div class="small">Unable to load logs.</div>';
+
+          setResultHero(data);
+          renderPredictions(data);
+          renderHistogramTabs(data);
+          renderAnalysisText(data);
+          summarizeUncertainty(data);
+
+          requestMetaEl.textContent = `request_id: ${data.request_id}`;
+          ciMethodMetaEl.textContent = `CI method: ${((data.ci_metadata || {}).method) || "unknown"}`;
+          lastResponsePayload = data;
+          try {
+            localStorage.setItem("viiraa_last_request_payload", JSON.stringify(payload, null, 2));
+            localStorage.setItem("viiraa_last_response_payload", JSON.stringify(data, null, 2));
+          } catch {}
+          setStatus("Prediction completed.");
+        } catch (err) {
+          errorEl.textContent = String(err);
+          setStatus("Prediction failed.");
+        } finally {
+          setLoading(false);
         }
       }
 
@@ -620,24 +1050,91 @@
         setStatus("Result JSON downloaded.");
       }
 
+      function activateTab(tab) {
+        const showTypical = tab === "typical";
+        tabTypicalBtn.classList.toggle("active", showTypical);
+        tabPersonalBtn.classList.toggle("active", !showTypical);
+        tabTypicalPane.style.display = showTypical ? "block" : "none";
+        tabPersonalPane.style.display = showTypical ? "none" : "block";
+      }
+
+      async function onSeriesFileSelected(evt) {
+        const f = evt.target.files && evt.target.files[0];
+        if (!f) return;
+        const txt = await f.text();
+        rawPreGlucoseEl.value = txt;
+        updateSeriesPreview();
+      }
+
+      document.getElementById("predictBtn").addEventListener("click", runPrediction);
       document.getElementById("loadRawExampleBtn").addEventListener("click", loadRawExample);
       document.getElementById("clearBtn").addEventListener("click", () => {
         clearInputs();
         clearOutput();
         setStatus("Cleared input and output.");
       });
-      document.getElementById("predictBtn").addEventListener("click", runPrediction);
-      const refreshLogsBtn = document.getElementById("refreshLogsBtn");
-      if (refreshLogsBtn) refreshLogsBtn.addEventListener("click", loadRecentLogs);
       document.getElementById("copyRequestBtn").addEventListener("click", copyRequestJson);
       document.getElementById("downloadResultBtn").addEventListener("click", downloadResultJson);
+      document.getElementById("useSampleNearSeriesBtn").addEventListener("click", loadRawExample);
+      rawPreGlucoseEl.addEventListener("input", updateSeriesPreview);
+      seriesFileEl.addEventListener("change", onSeriesFileSelected);
+      tabTypicalBtn.addEventListener("click", () => activateTab("typical"));
+      tabPersonalBtn.addEventListener("click", () => activateTab("personal"));
+      heightUnitEl.addEventListener("change", syncHeightEntryMode);
+      heightEl.addEventListener("input", recomputeBmi);
+      heightFeetEl.addEventListener("input", recomputeBmi);
+      heightInchesEl.addEventListener("input", recomputeBmi);
+      bodyWeightEl.addEventListener("input", recomputeBmi);
+      bodyWeightUnitEl.addEventListener("change", recomputeBmi);
+      typicalMetricPeakBtn.addEventListener("click", () => {
+        selectedTypicalMetric = "peak_amplitude";
+        typicalMetricPeakBtn.classList.add("active");
+        typicalMetricAucBtn.classList.remove("active");
+        typicalMetricIAucBtn.classList.remove("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
+      typicalMetricAucBtn.addEventListener("click", () => {
+        selectedTypicalMetric = "auc_120_abs";
+        typicalMetricPeakBtn.classList.remove("active");
+        typicalMetricAucBtn.classList.add("active");
+        typicalMetricIAucBtn.classList.remove("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
+      typicalMetricIAucBtn.addEventListener("click", () => {
+        selectedTypicalMetric = "iauc_120";
+        typicalMetricPeakBtn.classList.remove("active");
+        typicalMetricAucBtn.classList.remove("active");
+        typicalMetricIAucBtn.classList.add("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
+      personalMetricPeakBtn.addEventListener("click", () => {
+        selectedPersonalMetric = "peak_amplitude";
+        personalMetricPeakBtn.classList.add("active");
+        personalMetricAucBtn.classList.remove("active");
+        personalMetricIAucBtn.classList.remove("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
+      personalMetricAucBtn.addEventListener("click", () => {
+        selectedPersonalMetric = "auc_120_abs";
+        personalMetricPeakBtn.classList.remove("active");
+        personalMetricAucBtn.classList.add("active");
+        personalMetricIAucBtn.classList.remove("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
+      personalMetricIAucBtn.addEventListener("click", () => {
+        selectedPersonalMetric = "iauc_120";
+        personalMetricPeakBtn.classList.remove("active");
+        personalMetricAucBtn.classList.remove("active");
+        personalMetricIAucBtn.classList.add("active");
+        if (lastResponsePayload) renderHistogramTabs(lastResponsePayload);
+      });
 
       async function init() {
         await loadUiConfig();
+        syncHeightEntryMode();
         await loadRawExample();
-        await loadRecentLogs();
+        activateTab("typical");
       }
-
       init();
     </script>
   </body>
