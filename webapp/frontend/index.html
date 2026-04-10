@@ -27,6 +27,18 @@
         color: var(--text);
         background: radial-gradient(circle at 95% 0%, #dff3f0 0%, transparent 28%), var(--bg);
         font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        line-height: 1.35;
+      }
+      a { color: #0b6f69; }
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible,
+      summary:focus-visible,
+      .ci-help:focus-visible {
+        outline: 3px solid #77b7ab;
+        outline-offset: 2px;
       }
       .wrap { max-width: 1380px; margin: 20px auto 30px; padding: 0 14px; }
       .top {
@@ -244,6 +256,13 @@
       }
       @media (max-width: 720px) {
         .row-2, .row-3, .row-4, .results, .hero-grid { grid-template-columns: 1fr; }
+        .wrap { margin-top: 12px; padding: 0 10px; }
+        .hero, .meta, .panel { padding: 10px; border-radius: 12px; }
+        h1 { font-size: 1.5rem; }
+        .controls button { width: 100%; }
+        .tabs { display: grid; grid-template-columns: 1fr 1fr; }
+        .metric-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+        .metric-tab-btn, .tab-btn { width: 100%; }
       }
     </style>
   </head>
@@ -278,8 +297,8 @@
             <button class="tertiary" id="clearBtn">Clear</button>
           </div>
 
-          <div id="status" class="status">Ready.</div>
-          <div id="error" class="err"></div>
+          <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
+          <div id="error" class="err" role="alert" aria-live="assertive"></div>
 
           <div class="section">
             <h3>Meal</h3>
@@ -295,25 +314,25 @@
               </div>
               <div>
                 <label for="minsSinceLast">minutes_since_last_meal *</label>
-                <input id="minsSinceLast" type="number" step="any" placeholder="180" />
+                <input id="minsSinceLast" type="number" step="any" placeholder="180" autocomplete="off" />
               </div>
             </div>
             <div class="fields row-4" style="margin-top: 8px;">
               <div>
                 <label for="mealCalories">meal_calories *</label>
-                <input id="mealCalories" type="number" step="any" placeholder="650" />
+                <input id="mealCalories" type="number" step="any" placeholder="650" autocomplete="off" />
               </div>
               <div>
                 <label for="carbsG">carbs_g *</label>
-                <input id="carbsG" type="number" step="any" placeholder="70" />
+                <input id="carbsG" type="number" step="any" placeholder="70" autocomplete="off" />
               </div>
               <div>
                 <label for="proteinG">protein_g *</label>
-                <input id="proteinG" type="number" step="any" placeholder="32" />
+                <input id="proteinG" type="number" step="any" placeholder="32" autocomplete="off" />
               </div>
               <div>
                 <label for="fatG">fat_g *</label>
-                <input id="fatG" type="number" step="any" placeholder="22" />
+                <input id="fatG" type="number" step="any" placeholder="22" autocomplete="off" />
               </div>
             </div>
           </div>
@@ -323,7 +342,7 @@
             <div class="fields row-2">
               <div>
                 <label for="age">Age *</label>
-                <input id="age" type="number" step="any" placeholder="42" />
+                <input id="age" type="number" step="any" placeholder="42" autocomplete="off" />
               </div>
               <div>
                 <label for="gender">Gender *</label>
@@ -337,17 +356,17 @@
               <div>
                 <label for="height">Height *</label>
                 <div id="heightSingleWrap">
-                  <input id="height" type="number" step="any" placeholder="65" />
+                  <input id="height" type="number" step="any" placeholder="65" autocomplete="off" />
                 </div>
                 <div id="heightFeetInchesWrap" style="display:none;">
                   <div class="inline-row">
                     <div style="flex:1;">
                       <label for="heightFeet" class="helper">feet</label>
-                      <input id="heightFeet" type="number" step="1" min="0" placeholder="5" />
+                      <input id="heightFeet" type="number" step="1" min="0" placeholder="5" autocomplete="off" />
                     </div>
                     <div style="flex:1;">
                       <label for="heightInches" class="helper">inches</label>
-                      <input id="heightInches" type="number" step="any" min="0" max="11.99" placeholder="5" />
+                      <input id="heightInches" type="number" step="any" min="0" max="11.99" placeholder="5" autocomplete="off" />
                     </div>
                   </div>
                 </div>
@@ -360,7 +379,7 @@
               </div>
               <div>
                 <label for="bodyWeight">Body weight *</label>
-                <input id="bodyWeight" type="number" step="any" placeholder="149" />
+                <input id="bodyWeight" type="number" step="any" placeholder="149" autocomplete="off" />
                 <select id="bodyWeightUnit" style="margin-top: 6px;">
                   <option value="lb" selected>lb</option>
                   <option value="kg">kg</option>
@@ -380,11 +399,11 @@
             <div class="fields row-2">
               <div>
                 <label for="a1cLab">A1c PDL (Lab) *</label>
-                <input id="a1cLab" type="number" step="any" placeholder="5.7" />
+                <input id="a1cLab" type="number" step="any" placeholder="5.7" autocomplete="off" />
               </div>
               <div>
                 <label for="fastingLab">Fasting GLU - PDL (Lab) *</label>
-                <input id="fastingLab" type="number" step="any" placeholder="95" />
+                <input id="fastingLab" type="number" step="any" placeholder="95" autocomplete="off" />
               </div>
             </div>
             <div class="fields row-2" style="margin-top: 8px;">
@@ -398,8 +417,8 @@
           <div class="section">
             <h3>Pre-Meal Glucose Series</h3>
             <label for="rawPreGlucose">pre_glucose_series *</label>
-            <textarea id="rawPreGlucose" rows="5" placeholder="92, 93, 94, 95, 97, 99"></textarea>
-            <div class="small" style="margin-top: 6px;">Accepted format: comma/newline separated values. Example: <code>92, 93, 94</code>.</div>
+            <textarea id="rawPreGlucose" rows="5" placeholder="92, 93, 94, 95, 97, 99" aria-describedby="preGlucoseHelp"></textarea>
+            <div class="small" id="preGlucoseHelp" style="margin-top: 6px;">Accepted format: comma/newline separated values. Example: <code>92, 93, 94</code>.</div>
             <div class="series-toolbar">
               <span class="series-count" id="seriesCount">0 points detected</span>
               <input id="seriesFile" type="file" accept=".csv,.txt" />
@@ -437,7 +456,7 @@
             <div class="uncertainty" id="uncertaintyBanner">Uncertainty summary will appear after prediction.</div>
           </div>
 
-          <div id="results" class="results"></div>
+          <div id="results" class="results" role="region" aria-live="polite" aria-label="Prediction metric cards"></div>
 
           <div class="tabs">
             <button class="tab-btn active" id="tabTypicalBtn" type="button">Typical Meal Type</button>
@@ -524,6 +543,7 @@
       const tabTypicalPane = document.getElementById("tabTypicalPane");
       const tabPersonalPane = document.getElementById("tabPersonalPane");
       const ciMethodMetaEl = document.getElementById("ciMethodMeta");
+      const predictBtnEl = document.getElementById("predictBtn");
 
       const typicalMetricPeakBtn = document.getElementById("typicalMetricPeakBtn");
       const typicalMetricAucBtn = document.getElementById("typicalMetricAucBtn");
@@ -546,6 +566,7 @@
         const busy = pendingCount > 0;
         const buttons = document.querySelectorAll("button");
         for (const b of buttons) b.disabled = busy;
+        predictBtnEl.setAttribute("aria-busy", busy ? "true" : "false");
       }
 
       function normalizeHeightToInches(v, unit) {
