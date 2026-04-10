@@ -346,6 +346,34 @@ def _build_analysis_text(
     }
 
 
+def _augment_predictions_for_output(
+    preds: Dict[str, float], intervals: Dict[str, Dict[str, list[float]]], features: Dict[str, Any]
+) -> tuple[Dict[str, float], Dict[str, Dict[str, list[float]]]]:
+    out_preds = dict(preds)
+    out_intervals: Dict[str, Dict[str, list[float]]] = {k: dict(v) for k, v in intervals.items()}
+    try:
+        baseline = float(features.get("premeal_baseline_glucose"))
+    except Exception:
+        baseline = float("nan")
+    if not np.isfinite(baseline):
+        return out_preds, out_intervals
+    peak_delta = float(preds.get("peak_amplitude", 0.0))
+    out_preds["peak_glucose_abs"] = float(baseline + peak_delta)
+    peak_ci = intervals.get("peak_amplitude", {}).get("ci_95")
+    peak_ci80 = intervals.get("peak_amplitude", {}).get("ci_80")
+    if peak_ci80 is not None and len(peak_ci80) == 2:
+        out_intervals.setdefault("peak_glucose_abs", {})["ci_80"] = [
+            float(baseline + float(peak_ci80[0])),
+            float(baseline + float(peak_ci80[1])),
+        ]
+    if peak_ci is not None and len(peak_ci) == 2:
+        out_intervals.setdefault("peak_glucose_abs", {})["ci_95"] = [
+            float(baseline + float(peak_ci[0])),
+            float(baseline + float(peak_ci[1])),
+        ]
+    return out_preds, out_intervals
+
+
 def _cgmacros_reference_meal_types() -> list[str]:
     mts = set()
     for metric_map in CGMACROS_REFERENCE.values():
@@ -400,13 +428,14 @@ def example_response() -> Dict[str, Any]:
         raw_payload = service.load_example(example_path)
         features = _build_required_features_or_422(RawFeatureBuildRequest(**raw_payload))
         preds, intervals, _ = service.predict_with_intervals(features)
+        preds_out, intervals_out = _augment_predictions_for_output(preds=preds, intervals=intervals, features=features)
         meal_type = str(features.get("meal_type", "Lunch"))
         cohort = _build_cohort_comparison(meal_type=meal_type, preds=preds)
         personal = _build_personal_comparison(user_id="example-user", meal_type=meal_type, preds=preds)
         analysis_text = _build_analysis_text(preds=preds, intervals=intervals, cohort=cohort, personal=personal)
         return {
-            "predictions": preds,
-            "prediction_intervals": intervals,
+            "predictions": preds_out,
+            "prediction_intervals": intervals_out,
             "cohort_comparison": cohort,
             "personal_comparison": personal,
             "analysis_text": analysis_text,
@@ -466,14 +495,15 @@ def build_features_from_raw(req: RawFeatureBuildRequest) -> RawFeatureBuildRespo
 def diagnostics_raw_input(req: RawFeatureBuildRequest) -> Dict[str, Any]:
     features = _build_required_features_or_422(req)
     preds, intervals, ci_method = service.predict_with_intervals(features)
+    preds_out, intervals_out = _augment_predictions_for_output(preds=preds, intervals=intervals, features=features)
     return {
         "raw_contract": {
             "strict_required_fields": True,
             "default_fill_for_required_raw_fields": False,
         },
         "features_used_for_model": features,
-        "predictions": preds,
-        "prediction_intervals": intervals,
+        "predictions": preds_out,
+        "prediction_intervals": intervals_out,
         "ci_method": ci_method,
     }
 
@@ -517,6 +547,7 @@ def predict(req: PredictRequest) -> PredictResponse:
     cohort = _build_cohort_comparison(meal_type=meal_type, preds=preds)
     personal = _build_personal_comparison(user_id=req.user_id, meal_type=meal_type, preds=preds)
     analysis_text = _build_analysis_text(preds=preds, intervals=intervals, cohort=cohort, personal=personal)
+    preds_out, intervals_out = _augment_predictions_for_output(preds=preds, intervals=intervals, features=features)
 
     notes = [
         "This endpoint predicts scalar targets from provided meal/glucose context.",
@@ -525,14 +556,15 @@ def predict(req: PredictRequest) -> PredictResponse:
         "Cohort comparison uses CGMacros-derived same-meal-type OOF distributions with 30-bin histograms.",
         "Personal comparison includes user-history percentiles and 30-bin histograms when enough history is available.",
         "AUC-abs and peak-amplitude predictions are constrained to nonnegative values in postprocessing.",
+        "For interpretability, response includes `peak_glucose_abs` (baseline + peak_amplitude).",
         "Use for research workflows; not for diagnosis or treatment decisions.",
     ]
 
     expected = service.expected_columns() if req.include_expected_columns else None
     resp = PredictResponse(
         request_id=request_id,
-        predictions=preds,
-        prediction_intervals=intervals,
+        predictions=preds_out,
+        prediction_intervals=intervals_out,
         cohort_comparison=cohort,
         personal_comparison=personal,
         analysis_text=analysis_text,
@@ -547,8 +579,8 @@ def predict(req: PredictRequest) -> PredictResponse:
             "request_id": request_id,
             "status": "ok",
             "latency_ms": round((time.perf_counter() - t0) * 1000.0, 3),
-            "predictions": preds,
-            "prediction_intervals": intervals,
+            "predictions": preds_out,
+            "prediction_intervals": intervals_out,
             "features": {"meal_type": meal_type},
             "user_id": req.user_id,
             "ci_method": ci_method,
@@ -568,7 +600,9 @@ def predict_batch(req: PredictBatchRequest) -> PredictBatchResponse:
     try:
         for item in req.items:
             features = _build_required_features_or_422(item)
-            preds_all.append(service.predict_one(features))
+            preds = service.predict_one(features)
+            preds_out, _ = _augment_predictions_for_output(preds=preds, intervals={}, features=features)
+            preds_all.append(preds_out)
     except HTTPException:
         raise
     except Exception as exc:
