@@ -94,6 +94,7 @@ class ScalarMLPInferenceService:
         self.model_root = model_root
         self.models: Dict[str, LoadedTargetModel] = {}
         self.fold_models: Dict[str, List[LoadedTargetModel]] = {}
+        self.residual_calibration: Dict[str, Dict[str, float]] = {}
         self._load()
 
     @staticmethod
@@ -146,6 +147,35 @@ class ScalarMLPInferenceService:
                     continue
                 ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
                 self.fold_models[target].append(self._load_target_ckpt(target, ckpt))
+        self._load_residual_calibration()
+
+    def _load_residual_calibration(self) -> None:
+        out: Dict[str, Dict[str, float]] = {}
+        fold_root = self.model_root.parent / "best_fold_model"
+        for target in TARGETS:
+            p = fold_root / target / "oof_predictions.parquet"
+            if not p.exists():
+                continue
+            true_col = f"true__{target}"
+            pred_col = f"pred__{target}"
+            try:
+                df = pd.read_parquet(p, columns=[true_col, pred_col])
+            except Exception:
+                continue
+            if true_col not in df.columns or pred_col not in df.columns:
+                continue
+            y_true = pd.to_numeric(df[true_col], errors="coerce")
+            y_pred = pd.to_numeric(df[pred_col], errors="coerce")
+            mask = y_true.notna() & y_pred.notna()
+            if not bool(mask.any()):
+                continue
+            resid_abs = np.abs(y_true[mask].to_numpy(dtype=np.float64) - y_pred[mask].to_numpy(dtype=np.float64))
+            out[target] = {
+                "n": float(resid_abs.size),
+                "abs_q80": float(np.quantile(resid_abs, 0.80)),
+                "abs_q95": float(np.quantile(resid_abs, 0.95)),
+            }
+        self.residual_calibration = out
 
     def expected_columns(self) -> Dict[str, List[str]]:
         cols: Dict[str, set[str]] = {t: set() for t in TARGETS}
@@ -192,11 +222,12 @@ class ScalarMLPInferenceService:
 
     def predict_with_intervals(
         self, features: Dict[str, Any]
-    ) -> Tuple[Dict[str, float], Dict[str, Dict[str, List[float]]], str]:
+    ) -> Tuple[Dict[str, float], Dict[str, Dict[str, List[float]]], Dict[str, Any]]:
         row = _derive_features(features)
         preds: Dict[str, float] = {}
         intervals: Dict[str, Dict[str, List[float]]] = {}
         method = "heuristic_spread_v1"
+        ci_meta: Dict[str, Any] = {"method": method, "targets": {}}
         for target, loaded in self.models.items():
             folds = self.fold_models.get(target, [])
             fold_preds = [self._predict_with_loaded(row, fm) for fm in folds]
@@ -226,6 +257,17 @@ class ScalarMLPInferenceService:
                 ci80 = [float(p - hw80), float(p + hw80)]
                 ci95 = [float(p - hw95), float(p + hw95)]
 
+            calib = self.residual_calibration.get(target)
+            if calib is not None:
+                q80 = float(calib.get("abs_q80", 0.0))
+                q95 = float(calib.get("abs_q95", 0.0))
+                ci80 = [min(float(ci80[0]), float(p - q80)), max(float(ci80[1]), float(p + q80))]
+                ci95 = [min(float(ci95[0]), float(p - q95)), max(float(ci95[1]), float(p + q95))]
+                if method.startswith("fold_ensemble"):
+                    method = "fold_ensemble_quantile_plus_oof_resid_v2"
+                else:
+                    method = "heuristic_plus_oof_resid_v2"
+
             if target in NONNEGATIVE_TARGETS:
                 p = max(0.0, float(p))
                 ci80 = [max(0.0, float(ci80[0])), max(0.0, float(ci80[1]))]
@@ -239,7 +281,14 @@ class ScalarMLPInferenceService:
                 "ci_80": [float(ci80[0]), float(ci80[1])],
                 "ci_95": [float(ci95[0]), float(ci95[1])],
             }
-        return preds, intervals, method
+            ci_meta["targets"][target] = {
+                "fold_count": int(len(fold_preds)),
+                "calibration_samples": int(calib["n"]) if calib is not None else 0,
+                "residual_abs_q80": float(calib["abs_q80"]) if calib is not None else None,
+                "residual_abs_q95": float(calib["abs_q95"]) if calib is not None else None,
+            }
+        ci_meta["method"] = method
+        return preds, intervals, ci_meta
 
     def demographic_fields(self) -> List[str]:
         cols = set(self.expected_columns()["union"])

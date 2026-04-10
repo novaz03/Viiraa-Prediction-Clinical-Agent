@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viiraa Backend Tools</title>
+    <style>
+      :root {
+        --bg-top: #f0eee7;
+        --bg-bottom: #dce8e7;
+        --panel: #ffffff;
+        --text: #1a2524;
+        --muted: #5f6e69;
+        --line: #d8e1dd;
+        --teal: #0d766f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--text);
+        background: linear-gradient(145deg, var(--bg-top), var(--bg-bottom));
+        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+      }
+      .wrap { max-width: 1100px; margin: 20px auto 30px; padding: 0 14px; }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+      h1 { margin: 0 0 8px; font-size: 1.6rem; letter-spacing: -0.02em; }
+      .small { color: var(--muted); font-size: 0.88rem; }
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+      button { border: 0; border-radius: 8px; padding: 8px 11px; font-weight: 680; cursor: pointer; }
+      .primary { background: var(--teal); color: #fff; }
+      .secondary { background: #e4ebea; color: #223635; }
+      textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px; min-height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82rem; }
+      .log-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 6px; background: #fcfefd; }
+      a { color: var(--teal); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Backend Tools</h1>
+        <div class="small">Operational/debug views moved from main page. Return to <a href="/">prediction page</a>.</div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Recent Requests</h3>
+        <div id="recentLogs"></div>
+        <div class="controls">
+          <button class="primary" id="refreshLogsBtn">Refresh Logs</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Last Request Payload (from main page)</h3>
+        <textarea id="requestPayload" readonly></textarea>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Last Response Payload (from main page)</h3>
+        <textarea id="responsePayload" readonly></textarea>
+      </div>
+    </div>
+
+    <script>
+      const recentLogsEl = document.getElementById("recentLogs");
+      const requestPayloadEl = document.getElementById("requestPayload");
+      const responsePayloadEl = document.getElementById("responsePayload");
+
+      async function loadRecentLogs() {
+        recentLogsEl.innerHTML = "";
+        try {
+          const r = await fetch("/v1/logs/recent?limit=20");
+          const data = await r.json();
+          const items = data.items || [];
+          if (!items.length) {
+            recentLogsEl.innerHTML = '<div class="small">No logs yet.</div>';
+            return;
+          }
+          for (const item of items) {
+            const div = document.createElement("div");
+            div.className = "log-item";
+            const status = item.status || "unknown";
+            const ts = item.ts_utc || "";
+            const req = item.request_id || "";
+            const lat = item.latency_ms !== undefined ? `${item.latency_ms} ms` : "";
+            div.innerHTML = `<div class="small"><b>${status}</b> ${ts}</div><div class="small">${req}</div><div class="small">${lat}</div>`;
+            recentLogsEl.appendChild(div);
+          }
+        } catch {
+          recentLogsEl.innerHTML = '<div class="small">Unable to load logs.</div>';
+        }
+      }
+
+      function loadLastPayloads() {
+        let req = "";
+        let resp = "";
+        try {
+          req = localStorage.getItem("viiraa_last_request_payload") || "";
+          resp = localStorage.getItem("viiraa_last_response_payload") || "";
+        } catch {}
+        requestPayloadEl.value = req || "No cached request payload yet. Run a prediction on / first.";
+        responsePayloadEl.value = resp || "No cached response payload yet. Run a prediction on / first.";
+      }
+
+      document.getElementById("refreshLogsBtn").addEventListener("click", loadRecentLogs);
+
+      async function init() {
+        loadLastPayloads();
+        await loadRecentLogs();
+      }
+      init();
+    </script>
+  </body>
+</html>

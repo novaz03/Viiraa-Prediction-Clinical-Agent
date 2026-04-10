@@ -86,6 +86,7 @@
           <div class="small" style="margin-top: 6px;">Outputs are model predictions and not clinical diagnosis or treatment guidance.</div>
           <div class="small" id="requestMeta" style="margin-top: 10px;"></div>
           <div class="small" id="fixedParams" style="margin-top: 8px;"></div>
+          <div class="small" style="margin-top: 8px;">Backend tools: <a href="/backend">/backend</a></div>
         </div>
       </div>
 
@@ -226,16 +227,6 @@
             <div id="analysisText"></div>
           </div>
 
-          <div class="card side-card">
-            <h3 style="margin-top: 0;">Recent Requests</h3>
-            <div id="recentLogs"></div>
-            <button class="secondary" id="refreshLogsBtn">Refresh Logs</button>
-          </div>
-
-          <div class="card">
-            <h3 style="margin-top: 0;">Raw Payload / Response</h3>
-            <textarea id="rawPayload" rows="14" readonly></textarea>
-          </div>
         </div>
       </div>
     </div>
@@ -294,7 +285,7 @@
         personalHistVizEl.innerHTML = "";
         analysisSummaryEl.innerHTML = '<div class="summary-title">Excursion Summary</div><div class="summary-text">Run a prediction to view summary.</div>';
         analysisTextEl.innerHTML = "";
-        rawPayloadEl.value = "";
+        if (rawPayloadEl) rawPayloadEl.value = "";
         lastResponsePayload = null;
       }
 
@@ -411,6 +402,13 @@
         for (const key of ["auc_120_abs", "iauc_120", "peak_amplitude"]) {
           const m = metrics[key];
           if (!m) continue;
+          if (m.available === false) {
+            const card = document.createElement("div");
+            card.className = "hist-card";
+            card.innerHTML = `<div class="hist-title"><b>${key}</b></div><div class="small">${m.reason || "No CGMacros reference available for this meal type."}</div>`;
+            histVizEl.appendChild(card);
+            continue;
+          }
           const counts = m.bin_counts || [];
           const hi = Number(m.highlight_bin ?? 0);
           const maxCount = Math.max(1, ...counts.map((x) => Number(x || 0)));
@@ -421,7 +419,7 @@
             const klass = i === hi ? "hist-bar active" : "hist-bar";
             return `<div class="${klass}" style="height:${h}px"></div>`;
           }).join("");
-          card.innerHTML = `<div class="hist-title"><b>${key}</b> percentile: ${Number(m.percentile || 0).toFixed(1)} | source: ${m.source || "n/a"}</div><div class="hist-bars">${barsHtml}</div>`;
+          card.innerHTML = `<div class="hist-title"><b>${key}</b> percentile: ${Number(m.percentile || 0).toFixed(1)}</div><div class="hist-bars">${barsHtml}</div>`;
           histVizEl.appendChild(card);
         }
       }
@@ -491,7 +489,7 @@
         setStatus("Running prediction...");
         setLoading(true);
         lastRequestPayload = payload;
-        rawPayloadEl.value = JSON.stringify(payload, null, 2);
+        if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(payload, null, 2);
 
         try {
           const r = await fetch("/v1/predict", {
@@ -502,7 +500,7 @@
           const data = await r.json();
           if (!r.ok) {
             errorEl.textContent = data.detail || "Prediction failed.";
-            rawPayloadEl.value = JSON.stringify(data, null, 2);
+            if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(data, null, 2);
             setStatus("Prediction failed.");
             return;
           }
@@ -511,8 +509,12 @@
           renderPersonalHistogram(data);
           renderAnalysisText(data);
           requestMetaEl.textContent = `request_id: ${data.request_id}`;
-          rawPayloadEl.value = JSON.stringify(data, null, 2);
+          if (rawPayloadEl) rawPayloadEl.value = JSON.stringify(data, null, 2);
           lastResponsePayload = data;
+          try {
+            localStorage.setItem("viiraa_last_request_payload", JSON.stringify(payload, null, 2));
+            localStorage.setItem("viiraa_last_response_payload", JSON.stringify(data, null, 2));
+          } catch {}
           setStatus("Prediction completed.");
           await loadRecentLogs();
         } catch (err) {
@@ -563,6 +565,7 @@
       }
 
       async function loadRecentLogs() {
+        if (!recentLogsEl) return;
         recentLogsEl.innerHTML = "";
         try {
           const r = await fetch("/v1/logs/recent?limit=8");
@@ -624,7 +627,8 @@
         setStatus("Cleared input and output.");
       });
       document.getElementById("predictBtn").addEventListener("click", runPrediction);
-      document.getElementById("refreshLogsBtn").addEventListener("click", loadRecentLogs);
+      const refreshLogsBtn = document.getElementById("refreshLogsBtn");
+      if (refreshLogsBtn) refreshLogsBtn.addEventListener("click", loadRecentLogs);
       document.getElementById("copyRequestBtn").addEventListener("click", copyRequestJson);
       document.getElementById("downloadResultBtn").addEventListener("click", downloadResultJson);
 

@@ -35,9 +35,9 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
     "fat_g": 22,
     "Age": 42,
     "Gender": "F",
-    "Height": 165,
+    "Height": 65,
     "BMI": 24.8,
-    "Body weight": 67.5,
+    "Body weight": 149,
     "A1c PDL (Lab)": 5.7,
     "Fasting GLU - PDL (Lab)": 95,
     "minutes_since_last_meal": 180
@@ -58,9 +58,9 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
       "fat_g": 22,
       "Age": 42,
       "Gender": "F",
-      "Height": 165,
+      "Height": 65,
       "BMI": 24.8,
-      "Body weight": 67.5,
+      "Body weight": 149,
       "A1c PDL (Lab)": 5.7,
       "Fasting GLU - PDL (Lab)": 95,
       "minutes_since_last_meal": 180
@@ -74,16 +74,18 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
 
 `POST /v1/predict` now returns enriched fields:
 - `prediction_intervals` (`ci_80`, `ci_95` per target)
+- `ci_metadata` (interval method + per-target fold count and residual calibration quantiles)
 - `cohort_comparison` (CGMacros-derived 30-bin histogram metadata + percentile by meal type)
 - `personal_comparison` (deltas vs recent/median by `user_id` + user-history histogram when available)
 - `analysis_text` (verbose short-term and comparative interpretation)
-- Interval method uses fold-ensemble quantiles when fold models are available; `auc_120_abs` and `peak_amplitude` are constrained to nonnegative outputs.
+- Interval method uses fold-ensemble intervals plus OOF residual calibration when available; `auc_120_abs` and `peak_amplitude` are constrained to nonnegative outputs.
 - Response also includes `peak_glucose_abs = premeal_baseline_glucose + peak_amplitude` for absolute peak-glucose interpretability.
 
 `POST /v1/diagnostics/raw-input` returns:
 - strict raw-contract metadata
 - exact `features_used_for_model` after preprocessing
 - predictions + intervals (same model path as `/v1/predict`)
+- `ci_metadata` (same uncertainty metadata as `/v1/predict`)
 
 `POST /v1/diagnostics/numeric-zscores` returns per-target numeric feature diagnostics:
 - `feature`
@@ -109,9 +111,9 @@ Phase 1 scaffold for a website that accepts meal/glucose context and predicts:
         "fat_g": 22,
         "Age": 42,
         "Gender": "F",
-        "Height": 165,
+        "Height": 65,
         "BMI": 24.8,
-        "Body weight": 67.5,
+        "Body weight": 149,
         "A1c PDL (Lab)": 5.7,
         "Fasting GLU - PDL (Lab)": 95,
         "minutes_since_last_meal": 180
@@ -162,6 +164,7 @@ uvicorn webapp.backend.app:app --host 0.0.0.0 --port 8000 --reload
 
 Open:
 - `http://localhost:8000/`
+- `http://localhost:8000/backend` (logs + payload debug page)
 
 ## Run on Compute Node (LSF + port mapping)
 

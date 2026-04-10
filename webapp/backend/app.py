@@ -231,17 +231,19 @@ def _build_cohort_comparison(meal_type: str, preds: Dict[str, float]) -> Dict[st
     out: Dict[str, Any] = {"meal_type": meal_type, "source": "cgmacros_oof_true_distribution_v1", "metrics": {}}
     for metric, val in preds.items():
         cg_vals = CGMACROS_REFERENCE.get(metric, {}).get(mt, np.asarray([], dtype=np.float64))
-        local_vals = _cohort_values_from_logs(metric, meal_type)
         if cg_vals.size > 0:
             cohort_vals = cg_vals
             source = "cgmacros_oof_true"
-        elif local_vals.size > 0:
-            cohort_vals = local_vals
-            source = "local_logs_fallback"
         else:
-            cohort_vals = np.asarray([float(val)], dtype=np.float64)
-            source = "singleton_fallback"
+            out["metrics"][metric] = {
+                "available": False,
+                "sample_size": 0,
+                "source": "cgmacros_oof_true",
+                "reason": "No CGMacros reference rows for this meal_type/metric.",
+            }
+            continue
         hist = _histogram_for_value(cohort_vals, float(val), n_bins=HIST_BINS)
+        hist["available"] = True
         hist["sample_size"] = int(cohort_vals.size)
         hist["source"] = source
         out["metrics"][metric] = hist
@@ -408,6 +410,12 @@ def index() -> str:
     return html_path.read_text(encoding="utf-8")
 
 
+@app.get("/backend", response_class=HTMLResponse)
+def backend_page() -> str:
+    html_path = FRONTEND_DIR / "backend.html"
+    return html_path.read_text(encoding="utf-8")
+
+
 @app.get("/v1/healthz")
 def healthz() -> Dict[str, str]:
     return {"status": "ok"}
@@ -427,7 +435,7 @@ def example_response() -> Dict[str, Any]:
     try:
         raw_payload = service.load_example(example_path)
         features = _build_required_features_or_422(RawFeatureBuildRequest(**raw_payload))
-        preds, intervals, _ = service.predict_with_intervals(features)
+        preds, intervals, ci_metadata = service.predict_with_intervals(features)
         preds_out, intervals_out = _augment_predictions_for_output(preds=preds, intervals=intervals, features=features)
         meal_type = str(features.get("meal_type", "Lunch"))
         cohort = _build_cohort_comparison(meal_type=meal_type, preds=preds)
@@ -436,6 +444,7 @@ def example_response() -> Dict[str, Any]:
         return {
             "predictions": preds_out,
             "prediction_intervals": intervals_out,
+            "ci_metadata": ci_metadata,
             "cohort_comparison": cohort,
             "personal_comparison": personal,
             "analysis_text": analysis_text,
@@ -494,7 +503,7 @@ def build_features_from_raw(req: RawFeatureBuildRequest) -> RawFeatureBuildRespo
 @app.post("/v1/diagnostics/raw-input")
 def diagnostics_raw_input(req: RawFeatureBuildRequest) -> Dict[str, Any]:
     features = _build_required_features_or_422(req)
-    preds, intervals, ci_method = service.predict_with_intervals(features)
+    preds, intervals, ci_metadata = service.predict_with_intervals(features)
     preds_out, intervals_out = _augment_predictions_for_output(preds=preds, intervals=intervals, features=features)
     return {
         "raw_contract": {
@@ -504,7 +513,7 @@ def diagnostics_raw_input(req: RawFeatureBuildRequest) -> Dict[str, Any]:
         "features_used_for_model": features,
         "predictions": preds_out,
         "prediction_intervals": intervals_out,
-        "ci_method": ci_method,
+        "ci_metadata": ci_metadata,
     }
 
 
@@ -530,7 +539,7 @@ def predict(req: PredictRequest) -> PredictResponse:
     features = _build_required_features_or_422(req.raw_input)
 
     try:
-        preds, intervals, ci_method = service.predict_with_intervals(features)
+        preds, intervals, ci_metadata = service.predict_with_intervals(features)
     except Exception as exc:
         _append_log(
             {
@@ -552,7 +561,7 @@ def predict(req: PredictRequest) -> PredictResponse:
     notes = [
         "This endpoint predicts scalar targets from provided meal/glucose context.",
         "Accepts a single user-facing raw payload (`meal_info` + `pre_glucose_series`) and computes engineered features server-side.",
-        "Confidence intervals use fold-ensemble quantile intervals when fold checkpoints are available.",
+        "Confidence intervals use fold-ensemble intervals with OOF residual calibration when available.",
         "Cohort comparison uses CGMacros-derived same-meal-type OOF distributions with 30-bin histograms.",
         "Personal comparison includes user-history percentiles and 30-bin histograms when enough history is available.",
         "AUC-abs and peak-amplitude predictions are constrained to nonnegative values in postprocessing.",
@@ -565,6 +574,7 @@ def predict(req: PredictRequest) -> PredictResponse:
         request_id=request_id,
         predictions=preds_out,
         prediction_intervals=intervals_out,
+        ci_metadata=ci_metadata,
         cohort_comparison=cohort,
         personal_comparison=personal,
         analysis_text=analysis_text,
@@ -583,7 +593,8 @@ def predict(req: PredictRequest) -> PredictResponse:
             "prediction_intervals": intervals_out,
             "features": {"meal_type": meal_type},
             "user_id": req.user_id,
-            "ci_method": ci_method,
+            "ci_method": str(ci_metadata.get("method", "unknown")),
+            "ci_metadata": ci_metadata,
         }
     )
     return resp

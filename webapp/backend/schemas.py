@@ -29,6 +29,7 @@ class PredictResponse(BaseModel):
     request_id: str
     predictions: Dict[str, float]
     prediction_intervals: Optional[Dict[str, Dict[str, List[float]]]] = None
+    ci_metadata: Optional[Dict[str, Any]] = None
     cohort_comparison: Optional[Dict[str, Any]] = None
     personal_comparison: Optional[Dict[str, Any]] = None
     analysis_text: Optional[Dict[str, str]] = None
