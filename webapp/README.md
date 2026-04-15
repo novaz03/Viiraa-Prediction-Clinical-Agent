@@ -198,3 +198,15 @@ The job log (`logs/viiraa_webapp_api.<JOBID>.out`) prints the SSH tunnel command
 - TODO: add database-backed storage for demographics/lab profile data so users can reuse saved profile values across sessions.
 - For research use only; not for diagnosis/treatment decisions.
 - Requests are logged to `webapp/logs/predict_requests.jsonl` (configurable via `SCALAR_MLP_LOG_PATH`).
+- Interpretation generation modes:
+  - Default: heuristic (`VIIRAA_ANALYSIS_PROVIDER=heuristic`)
+  - OpenAI API: set `VIIRAA_ANALYSIS_PROVIDER=openai` and provide `OPENAI_API_KEY`
+    - Optional: `VIIRAA_ANALYSIS_MODEL` (default `gpt-4.1-mini`)
+    - Optional: `OPENAI_API_BASE` (default `https://api.openai.com/v1`)
+  - Gemini API: set `VIIRAA_ANALYSIS_PROVIDER=gemini` and provide `GEMINI_API_KEY`
+    - Optional: `VIIRAA_ANALYSIS_MODEL` (for example `gemini-1.5-flash`)
+    - Optional: `GEMINI_API_BASE` (default `https://generativelanguage.googleapis.com/v1beta`)
+  - Local model endpoint: set `VIIRAA_ANALYSIS_PROVIDER=local`
+    - Required: `VIIRAA_LOCAL_ANALYSIS_URL` (default `http://127.0.0.1:11434/api/generate`)
+    - Optional: `VIIRAA_ANALYSIS_MODEL`
+  - Optional timeout for API/local analysis calls: `VIIRAA_ANALYSIS_HTTP_TIMEOUT_SECONDS` (default `20`)
