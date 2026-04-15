@@ -313,6 +313,13 @@
                 </select>
               </div>
               <div>
+                <label for="modelSelect">Prediction model</label>
+                <select id="modelSelect"></select>
+                <div class="helper" id="modelSelectHelp" style="margin-top:4px;">Select which checkpoint set is used for prediction.</div>
+              </div>
+            </div>
+            <div class="fields row-2" style="margin-top: 8px;">
+              <div>
                 <label for="minsSinceLast">minutes_since_last_meal *</label>
                 <input id="minsSinceLast" type="number" step="any" placeholder="180" autocomplete="off" />
               </div>
@@ -515,6 +522,8 @@
 
       const userIdEl = document.getElementById("userId");
       const mealTypeEl = document.getElementById("mealType");
+      const modelSelectEl = document.getElementById("modelSelect");
+      const modelSelectHelpEl = document.getElementById("modelSelectHelp");
       const mealCaloriesEl = document.getElementById("mealCalories");
       const carbsGEl = document.getElementById("carbsG");
       const proteinGEl = document.getElementById("proteinG");
@@ -557,6 +566,7 @@
       let pendingCount = 0;
       let selectedTypicalMetric = "peak_amplitude";
       let selectedPersonalMetric = "peak_amplitude";
+      let modelOptions = [];
 
       function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -692,6 +702,7 @@
           },
           include_expected_columns: false,
           user_id: String(userIdEl.value || "anonymous").trim() || "anonymous",
+          model_id: String(modelSelectEl.value || "").trim() || null,
         };
       }
 
@@ -944,8 +955,35 @@
           const data = await r.json();
           const fixed = data.fixed_raw_params || {};
           fixedParamsEl.textContent = `Fixed raw params: step_minutes=${fixed.step_minutes ?? "n/a"}, baseline_window_minutes=${fixed.baseline_window_minutes ?? "n/a"}`;
+          modelOptions = Array.isArray(data.model_options) ? data.model_options : [];
+          const defaultModelId = String(data.default_model_id || "");
+          modelSelectEl.innerHTML = "";
+          for (const opt of modelOptions) {
+            const id = String(opt.model_id || "").trim();
+            if (!id) continue;
+            const label = String(opt.label || id);
+            const node = document.createElement("option");
+            node.value = id;
+            node.textContent = label;
+            modelSelectEl.appendChild(node);
+          }
+          if (defaultModelId && Array.from(modelSelectEl.options).some((o) => o.value === defaultModelId)) {
+            modelSelectEl.value = defaultModelId;
+          } else if (modelSelectEl.options.length > 0) {
+            modelSelectEl.selectedIndex = 0;
+          }
+          const selected = modelOptions.find((x) => String(x.model_id) === String(modelSelectEl.value));
+          if (selected) {
+            modelSelectHelpEl.textContent = `Using ${selected.label || selected.model_id}`;
+          }
         } catch {
           fixedParamsEl.textContent = "UI config unavailable; using local defaults.";
+          if (!modelSelectEl.options.length) {
+            const node = document.createElement("option");
+            node.value = "";
+            node.textContent = "default";
+            modelSelectEl.appendChild(node);
+          }
         }
       }
 
@@ -1156,6 +1194,14 @@
         await loadRawExample();
         activateTab("typical");
       }
+      modelSelectEl.addEventListener("change", () => {
+        const selected = modelOptions.find((x) => String(x.model_id) === String(modelSelectEl.value));
+        if (selected) {
+          modelSelectHelpEl.textContent = `Using ${selected.label || selected.model_id}`;
+        } else {
+          modelSelectHelpEl.textContent = "Select which checkpoint set is used for prediction.";
+        }
+      });
       init();
     </script>
   </body>

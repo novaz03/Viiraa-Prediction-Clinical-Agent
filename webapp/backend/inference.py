@@ -228,30 +228,27 @@ class ScalarMLPInferenceService:
         intervals: Dict[str, Dict[str, List[float]]] = {}
         method = "heuristic_spread_v1"
         ci_meta: Dict[str, Any] = {"method": method, "targets": {}}
+        methods_seen: set[str] = set()
         for target, loaded in self.models.items():
             folds = self.fold_models.get(target, [])
             fold_preds = [self._predict_with_loaded(row, fm) for fm in folds]
-            if len(fold_preds) >= 3:
+            fold_sigma: float | None = None
+            if len(fold_preds) >= 2:
                 arr = np.asarray(fold_preds, dtype=np.float64)
                 p = float(np.median(arr))
-                q10, q90 = np.quantile(arr, [0.10, 0.90])
-                q025, q975 = np.quantile(arr, [0.025, 0.975])
-                ci80 = [float(q10), float(q90)]
-                ci95 = [float(q025), float(q975)]
-                method = "fold_ensemble_quantile_v2"
-            elif len(fold_preds) == 2:
-                arr = np.asarray(fold_preds, dtype=np.float64)
-                p = float(np.mean(arr))
+                # Sigma-based spread from best-fold ensemble predictions.
                 sd = float(np.std(arr, ddof=1))
+                fold_sigma = sd
                 hw80 = 1.2816 * sd
                 hw95 = 1.9600 * sd
                 ci80 = [float(p - hw80), float(p + hw80)]
                 ci95 = [float(p - hw95), float(p + hw95)]
-                method = "fold_ensemble_gaussian_v1"
+                method = "fold_ensemble_sigma_v1"
             else:
                 p = self._predict_with_loaded(row, loaded)
                 # Fallback when fold models are unavailable.
                 sd = max(1e-6, 0.06 * max(abs(p), 1.0))
+                fold_sigma = None
                 hw80 = 1.2816 * sd
                 hw95 = 1.9600 * sd
                 ci80 = [float(p - hw80), float(p + hw80)]
@@ -264,7 +261,7 @@ class ScalarMLPInferenceService:
                 ci80 = [min(float(ci80[0]), float(p - q80)), max(float(ci80[1]), float(p + q80))]
                 ci95 = [min(float(ci95[0]), float(p - q95)), max(float(ci95[1]), float(p + q95))]
                 if method.startswith("fold_ensemble"):
-                    method = "fold_ensemble_quantile_plus_oof_resid_v2"
+                    method = "fold_ensemble_sigma_plus_oof_resid_v1"
                 else:
                     method = "heuristic_plus_oof_resid_v2"
 
@@ -283,11 +280,13 @@ class ScalarMLPInferenceService:
             }
             ci_meta["targets"][target] = {
                 "fold_count": int(len(fold_preds)),
+                "fold_sigma": float(fold_sigma) if fold_sigma is not None else None,
                 "calibration_samples": int(calib["n"]) if calib is not None else 0,
                 "residual_abs_q80": float(calib["abs_q80"]) if calib is not None else None,
                 "residual_abs_q95": float(calib["abs_q95"]) if calib is not None else None,
             }
-        ci_meta["method"] = method
+            methods_seen.add(method)
+        ci_meta["method"] = method if len(methods_seen) == 1 else "mixed"
         return preds, intervals, ci_meta
 
     def demographic_fields(self) -> List[str]:

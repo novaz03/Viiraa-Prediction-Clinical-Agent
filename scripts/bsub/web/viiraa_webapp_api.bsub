@@ -73,7 +73,7 @@ else
 fi
 
 if [ -n "${EXTRA_PYTHONPATH}" ]; then
-  export SCALAR_MLP_MODEL_ROOT="${EXTRA_PYTHONPATH}/outputs/experiments/scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_cwttarget/final_models"
+  export SCALAR_MLP_MODEL_ROOT="${EXTRA_PYTHONPATH}/outputs/experiments/scalar_cwt_5_360_same_anchor_mlp_cwtfeat_to_original/final_models"
   export SCALAR_MLP_EXAMPLE_PATH="${EXTRA_PYTHONPATH}/examples/mlp_models/sample_raw_input_single_meal.json"
 fi
 

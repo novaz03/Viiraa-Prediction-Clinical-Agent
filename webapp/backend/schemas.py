@@ -18,11 +18,13 @@ class PredictRequest(BaseModel):
     raw_input: RawInputPayload
     include_expected_columns: bool = False
     user_id: str = "anonymous"
+    model_id: Optional[str] = None
 
 
 class PredictBatchRequest(BaseModel):
     items: List[RawInputPayload] = Field(default_factory=list)
     include_expected_columns: bool = False
+    model_id: Optional[str] = None
 
 
 class PredictResponse(BaseModel):
