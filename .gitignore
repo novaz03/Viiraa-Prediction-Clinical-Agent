@@ -5,3 +5,5 @@ logs/*.out
 .codex
 lib_check
 webapp/logs/predict_requests.jsonl
+.secret
+webapp/.secret
