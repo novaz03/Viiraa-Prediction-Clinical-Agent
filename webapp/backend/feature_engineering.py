@@ -59,6 +59,24 @@ def _longest_missing_gap_minutes(raw: List[Any], step_minutes: float) -> float:
     return float(longest) * float(step_minutes)
 
 
+_OPTIONAL_MEAL_INFO_ALIASES: Dict[str, List[str]] = {
+    "fiber_g": ["fiber_g"],
+    "amount_consumed": ["amount_consumed", "Amount Consumed"],
+    "Insulin": ["Insulin", "insulin", "fasting_insulin"],
+}
+
+
+def _opt_raw_numeric(meal_info: Dict[str, Any], canonical: str) -> Optional[float]:
+    for key in _OPTIONAL_MEAL_INFO_ALIASES.get(canonical, [canonical]):
+        if key in meal_info and meal_info[key] not in (None, ""):
+            try:
+                v = float(meal_info[key])
+                return v if np.isfinite(v) else None
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
 def _require_raw_value(meal_info: Dict[str, Any], canonical: str) -> Any:
     for key in REQUIRED_MEAL_INFO_ALIASES.get(canonical, [canonical]):
         if key in meal_info and meal_info[key] not in (None, ""):
@@ -186,6 +204,10 @@ def build_required_features_from_raw(
     body_weight = _require_raw_numeric(meal_info, "Body weight", min_value=0.0)
     body_weight = _normalize_weight_to_pounds(body_weight)
 
+    fiber_g = _opt_raw_numeric(meal_info, "fiber_g")
+    amount_consumed = _opt_raw_numeric(meal_info, "amount_consumed")
+    fasting_insulin = _opt_raw_numeric(meal_info, "Insulin")
+
     out = {
         "meal_type": meal_type,
         "meal_calories": meal_calories,
@@ -218,4 +240,12 @@ def build_required_features_from_raw(
         "BMI": bmi,
         "Body weight": body_weight,
     }
+
+    if fiber_g is not None:
+        out["fiber_g"] = fiber_g
+    if amount_consumed is not None:
+        out["amount_consumed"] = amount_consumed
+    if fasting_insulin is not None:
+        out["Insulin"] = fasting_insulin
+
     return out

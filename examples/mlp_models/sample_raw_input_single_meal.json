@@ -6,6 +6,8 @@
       "carbs_g": 70,
       "protein_g": 32,
       "fat_g": 22,
+      "fiber_g": 8,
+      "amount_consumed": 380,
       "Age": 42,
       "Gender": "F",
       "Height": 65,
