@@ -9,13 +9,11 @@ import numpy as np
 import pandas as pd
 import torch
 
-from models.run_scalar_mlp import (
-    GatedScalarMLP,
-    ResidualScalarMLP,
-    ScalarMLP,
-    _inverse_transform_target,
-    _transform_categorical,
-    _transform_numeric,
+from webapp.backend.model_arch import (
+    build_model as _build_model_from_arch,
+    inverse_transform_target as _inverse_transform_target,
+    transform_categorical as _transform_categorical,
+    transform_numeric as _transform_numeric,
 )
 
 
@@ -36,11 +34,7 @@ class LoadedTargetModel:
 
 
 def _build_model(arch: str, input_dim: int, hidden_dims: List[int], dropout: float) -> torch.nn.Module:
-    if str(arch) == "residual":
-        return ResidualScalarMLP(input_dim=input_dim, hidden_dims=hidden_dims, dropout=dropout)
-    if str(arch) == "gated":
-        return GatedScalarMLP(input_dim=input_dim, hidden_dims=hidden_dims, dropout=dropout)
-    return ScalarMLP(input_dim=input_dim, hidden_dims=hidden_dims, dropout=dropout)
+    return _build_model_from_arch(arch=arch, input_dim=input_dim, hidden_dims=hidden_dims, dropout=dropout)
 
 
 def _derive_features(row: Dict[str, Any]) -> Dict[str, Any]:
